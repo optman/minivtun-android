@@ -1,0 +1,16 @@
+[package]
+name = "minivtun"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "minivtun"
+crate-type = ["dylib"]
+
+[dependencies]
+minivtun-rs = {features=["holepunch"], tag="v0.1.4", git="https://github.com/optman/minivtun-rs"}
+jni = "0.20"
+android_logger = "0.11"
+log = "0.4"

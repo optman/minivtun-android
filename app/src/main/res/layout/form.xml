@@ -22,38 +22,35 @@
             android:orientation="vertical"
             android:padding="3mm">
 
-        <TextView style="@style/item" android:text="@string/address"/>
-        <EditText style="@style/item" android:id="@+id/address"/>
+        <TextView style="@style/item" android:text="@string/server_address"/>
+        <EditText style="@style/item" android:id="@+id/server_address"/>
 
-        <TextView style="@style/item" android:text="@string/port"/>
-        <EditText style="@style/item" android:id="@+id/port" android:inputType="number"/>
+        <TextView style="@style/item" android:text="Rndz Server Address:"/>
+        <EditText style="@style/item" android:id="@+id/rndz_server_address"/>
+
+        <TextView style="@style/item" android:text="Rndz Remote Id:"/>
+        <EditText style="@style/item" android:id="@+id/rndz_remote_id"/>
+
+        <TextView style="@style/item" android:text="Rndz Local Id:"/>
+        <EditText style="@style/item" android:id="@+id/rndz_local_id"/>
+
+        <TextView style="@style/item" android:text="Cipher:"/>
+        <EditText style="@style/item" android:id="@+id/cipher"/>
 
         <TextView style="@style/item" android:text="@string/secret"/>
-        <EditText style="@style/item" android:id="@+id/secret" android:password="true"/>
+        <EditText style="@style/item" android:id="@+id/secret" android:inputType="textPassword"/>
 
-        <TextView style="@style/item" android:text="@string/proxyhost"/>
-        <EditText style="@style/item" android:id="@+id/proxyhost"/>
+        <TextView style="@style/item" android:text="Local IPv4:"/>
+        <EditText style="@style/item" android:id="@+id/local_ipv4"/>
 
-        <TextView style="@style/item" android:text="@string/proxyport"/>
-        <EditText style="@style/item" android:id="@+id/proxyport" android:inputType="number"/>
+        <TextView style="@style/item" android:text="Local IPv6:"/>
+        <EditText style="@style/item" android:id="@+id/local_ipv6"/>
 
-        <TextView style="@style/item" android:text="@string/packages"/>
-        <RadioGroup
-            style="@style/item"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-            <RadioButton
-                android:id="@+id/allowed"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/allowed"/>
-            <RadioButton
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/disallowed"/>
-        </RadioGroup>
-        <EditText style="@style/item" android:id="@+id/packages"/>
+        <TextView style="@style/item" android:text="Routes:"/>
+        <EditText style="@style/item" android:id="@+id/routes"/>
+
+        <TextView style="@style/item" android:text="NameServers:"/>
+        <EditText style="@style/item" android:id="@+id/dns"/>
 
         <Button style="@style/item" android:id="@+id/connect" android:text="@string/connect"/>
         <Button style="@style/item" android:id="@+id/disconnect" android:text="@string/disconnect"/>

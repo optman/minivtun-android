@@ -18,25 +18,22 @@
 <resources>
     <string name="app">ToyVPN</string>
 
-    <string name="address">Server Address:</string>
-    <string name="port">Server Port:</string>
+    <string name="server_address">Server Address:</string>
+    <string name="rndz_server_address">Rndz Server Address:</string>
+    <string name="rndz_remote_id">Rndz Remote Id</string>
+    <string name="rndz_local_id">Rndz Local Id</string>
+    <string name="cipher">Cihper:</string>
     <string name="secret">Shared Secret:</string>
+    <string name="local_ipv4">Local IPv4:</string>
+    <string name="local_ipv6">Local IPv6:</string>
+    <string name="routes">Routes:</string>
+    <string name="dns">NameSevers:</string>
+
     <string name="connect">Connect!</string>
     <string name="disconnect">Disconnect!</string>
-    <string name="proxyhost">HTTP proxy hostname</string>
-    <string name="proxyport">HTTP proxy port</string>
-
-    <string name="packages">Packages (comma separated):</string>
-    <string name="allowed">Allow</string>
-    <string name="disallowed">Disallow</string>
 
     <string name="connecting">ToyVPN is connecting...</string>
     <string name="connected">ToyVPN is connected!</string>
     <string name="disconnected">ToyVPN is disconnected!</string>
-    <string name="incomplete_proxy_settings">
-        Incomplete proxy settings. For HTTP proxy we require both hostname and port settings.
-    </string>
-    <string name="unknown_package_names">
-        Some of the specified package names do not correspond to any installed packages.
-    </string>
+
 </resources>

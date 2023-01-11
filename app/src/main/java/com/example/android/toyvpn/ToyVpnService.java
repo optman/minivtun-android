@@ -16,11 +16,13 @@
 
 package com.example.android.toyvpn;
 
-import android.app.Notification;
+/*import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+ */
 import android.app.PendingIntent;
 import android.content.Intent;
+
 import android.content.SharedPreferences;
 import android.net.VpnService;
 import android.os.Handler;
@@ -31,9 +33,6 @@ import android.util.Pair;
 import android.widget.Toast;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class ToyVpnService extends VpnService implements Handler.Callback {
@@ -52,8 +51,6 @@ public class ToyVpnService extends VpnService implements Handler.Callback {
 
     private final AtomicReference<Thread> mConnectingThread = new AtomicReference<>();
     private final AtomicReference<Connection> mConnection = new AtomicReference<>();
-
-    private AtomicInteger mNextConnectionId = new AtomicInteger(1);
 
     private PendingIntent mConfigureIntent;
 
@@ -89,7 +86,7 @@ public class ToyVpnService extends VpnService implements Handler.Callback {
     public boolean handleMessage(Message message) {
         Toast.makeText(this, message.what, Toast.LENGTH_SHORT).show();
         if (message.what != R.string.disconnected) {
-            updateForegroundNotification(message.what);
+            //updateForegroundNotification(message.what);
         }
         return true;
     }
@@ -97,22 +94,11 @@ public class ToyVpnService extends VpnService implements Handler.Callback {
     private void connect() {
         // Become a foreground service. Background services can be VPN services too, but they can
         // be killed by background check before getting a chance to receive onRevoke().
-        updateForegroundNotification(R.string.connecting);
+        //updateForegroundNotification(R.string.connecting);
         mHandler.sendEmptyMessage(R.string.connecting);
 
-        // Extract information from the shared preferences.
         final SharedPreferences prefs = getSharedPreferences(ToyVpnClient.Prefs.NAME, MODE_PRIVATE);
-        final String server = prefs.getString(ToyVpnClient.Prefs.SERVER_ADDRESS, "");
-        final byte[] secret = prefs.getString(ToyVpnClient.Prefs.SHARED_SECRET, "").getBytes();
-        final boolean allow = prefs.getBoolean(ToyVpnClient.Prefs.ALLOW, true);
-        final Set<String> packages =
-                prefs.getStringSet(ToyVpnClient.Prefs.PACKAGES, Collections.emptySet());
-        final int port = prefs.getInt(ToyVpnClient.Prefs.SERVER_PORT, 0);
-        final String proxyHost = prefs.getString(ToyVpnClient.Prefs.PROXY_HOSTNAME, "");
-        final int proxyPort = prefs.getInt(ToyVpnClient.Prefs.PROXY_PORT, 0);
-        startConnection(new ToyVpnConnection(
-                this, mNextConnectionId.getAndIncrement(), server, port, secret,
-                proxyHost, proxyPort, allow, packages));
+        startConnection(new ToyVpnConnection( this, new ToyVpnConfig(prefs)));
     }
 
     private void startConnection(final ToyVpnConnection connection) {
@@ -156,7 +142,7 @@ public class ToyVpnService extends VpnService implements Handler.Callback {
         setConnection(null);
         stopForeground(true);
     }
-
+/*
     private void updateForegroundNotification(final int message) {
         final String NOTIFICATION_CHANNEL_ID = "ToyVpn";
         NotificationManager mNotificationManager = (NotificationManager) getSystemService(
@@ -169,5 +155,5 @@ public class ToyVpnService extends VpnService implements Handler.Callback {
                 .setContentText(getString(message))
                 .setContentIntent(mConfigureIntent)
                 .build());
-    }
+    }*/
 }
