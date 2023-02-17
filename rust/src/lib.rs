@@ -6,8 +6,16 @@ pub mod android {
     use jni::JNIEnv;
     use minivtun::{config_socket_factory, cryptor, Client, Config, RndzConfig};
 
+    use std::fs;
+    use std::io::Read;
+    use std::os::unix::io::AsRawFd;
+    use std::os::unix::net::{UnixListener, UnixStream};
     use std::os::unix::prelude::RawFd;
+    use std::path::Path;
 
+    const CONTROL_PATH: &str = "minivtun.sock";
+
+    /// # Safety
     #[no_mangle]
     pub unsafe extern "C" fn Java_com_github_optman_minivtun_Native_run(
         env: JNIEnv,
@@ -39,6 +47,20 @@ pub mod android {
         ) {
             log::error!("run fail {:?}", err);
         };
+    }
+
+    /// # Safety
+    #[no_mangle]
+    pub unsafe extern "C" fn Java_com_github_optman_minivtun_Native_info<'a>(
+        env: JNIEnv<'a>,
+        _: JClass<'a>,
+    ) -> JString<'a> {
+        let mut buf = String::new();
+        if let Ok(mut ctrl) = UnixStream::connect(Path::new(CONTROL_PATH)) {
+            let _ = ctrl.read_to_string(&mut buf);
+        }
+
+        env.new_string(buf).unwrap()
     }
 
     pub(crate) fn run(
@@ -97,6 +119,13 @@ pub mod android {
 
         let raw_socket_factory = config_socket_factory(&mut config);
         config.with_socket_factory(&raw_socket_factory);
+
+        let ctrl_path = Path::new(CONTROL_PATH);
+        if ctrl_path.exists() {
+            fs::remove_file(ctrl_path)?;
+        }
+
+        config.with_control_fd(UnixListener::bind(ctrl_path)?.as_raw_fd());
 
         Client::new(config)?.run()
     }
