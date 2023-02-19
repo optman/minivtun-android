@@ -32,6 +32,8 @@ import android.util.Log;
 import android.util.Pair;
 import android.widget.Toast;
 
+import com.github.optman.minivtun.Native;
+
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -101,7 +103,7 @@ public class ToyVpnService extends VpnService implements Handler.Callback {
         startConnection(new ToyVpnConnection( this, new ToyVpnConfig(prefs)));
     }
 
-    private void startConnection(final ToyVpnConnection connection) {
+    private void startConnection(final ToyVpnConnection connection){
         // Replace any existing connecting thread with the  new one.
         final Thread thread = new Thread(connection, "ToyVpnThread");
         setConnectingThread(thread);

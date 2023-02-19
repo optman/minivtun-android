@@ -3,26 +3,29 @@ package com.github.optman.minivtun;
 import com.example.android.toyvpn.ToyVpnConfig;
 
 public class Native {
-    private final ToyVpnConfig mConfig;
     static {
         System.loadLibrary("minivtun");
     }
 
-    public Native(ToyVpnConfig config){
-        mConfig = config;
+    public Native(){
     }
-    public void Run(int tun){
+    public void Run(int tun, ToyVpnConfig config){
         run(    tun,
-                mConfig.server,
-                mConfig.rndzServer,
-                mConfig.rndzRemoteId,
-                mConfig.rndzLocalId,
-                mConfig.localIpv4,
-                mConfig.localIpv6,
-                mConfig.secret,
-                mConfig.cipher
+                config.server,
+                config.rndzServer,
+                config.rndzRemoteId,
+                config.rndzLocalId,
+                config.localIpv4,
+                config.localIpv6,
+                config.secret,
+                config.cipher
                 );
     }
+
+    public String Info(){
+        return info();
+    }
+
 
     private static native void run(int tun,
                                    String serverAddr,
@@ -34,6 +37,8 @@ public class Native {
                                    String secret,
                                    String cipher
                                    );
+
+    private static native String info();
 
 
 }

@@ -66,8 +66,9 @@ public class ToyVpnConnection implements Runnable {
         try{
             // configure the virtual network interface.
             iface = configure();
-            new Native(mConfig).Run(
-                    iface.getFd()
+            new Native().Run(
+                    iface.getFd(),
+                    mConfig
                     );
 
         } catch (Exception e){

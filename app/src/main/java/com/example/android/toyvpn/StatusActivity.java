@@ -1,0 +1,50 @@
+    package com.example.android.toyvpn;
+
+    import android.support.v7.app.AppCompatActivity;
+    import android.os.Bundle;
+    import android.util.Log;
+    import android.widget.RelativeLayout;
+    import android.widget.TextView;
+	import android.os.CountDownTimer;
+
+    import com.github.optman.minivtun.Native;
+
+
+    public class StatusActivity extends AppCompatActivity {
+
+		protected CountDownTimer timer;
+
+        @Override
+        protected void onCreate(Bundle savedInstanceState) {
+           super.onCreate(savedInstanceState);
+
+           RelativeLayout relParent = new RelativeLayout(this);
+           RelativeLayout.LayoutParams relParentParam = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT);
+           relParent.setLayoutParams(relParentParam);
+
+          TextView txtView = new TextView(this);
+          RelativeLayout.LayoutParams txtViewParams = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+          txtView.setLayoutParams(txtViewParams);
+          txtViewParams.addRule(RelativeLayout.ALIGN_TOP);
+
+          relParent.addView(txtView);
+          setContentView(relParent, relParentParam);
+
+		  timer = new CountDownTimer(10000000, 1000){
+			  public void onTick(long millisUntilFinished){
+				 String status = new Native().Info();
+				 txtView.setText(status);
+			  }
+			  public void onFinish(){} 
+		  };
+		  timer.start();
+		}
+        
+		@Override
+        protected void onDestroy(){
+		    timer.cancel();
+		    super.onDestroy();
+		}
+
+
+   }

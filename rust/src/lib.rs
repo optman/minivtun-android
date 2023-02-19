@@ -1,3 +1,5 @@
+#![feature(unix_socket_abstract)]
+#![feature(tcp_quickack)]
 #[allow(non_snake_case)]
 pub mod android {
 
@@ -6,12 +8,17 @@ pub mod android {
     use jni::JNIEnv;
     use minivtun::{config_socket_factory, cryptor, Client, Config, RndzConfig};
 
-    use std::fs;
     use std::io::Read;
+
+    #[cfg(target_os = "android")]
+    use std::os::android::net::SocketAddrExt;
+
+    #[cfg(target_os = "linux")]
+    use std::os::linux::net::SocketAddrExt;
+
     use std::os::unix::io::AsRawFd;
-    use std::os::unix::net::{UnixListener, UnixStream};
+    use std::os::unix::net::{SocketAddr, UnixListener, UnixStream};
     use std::os::unix::prelude::RawFd;
-    use std::path::Path;
 
     const CONTROL_PATH: &str = "minivtun.sock";
 
@@ -55,12 +62,12 @@ pub mod android {
         env: JNIEnv<'a>,
         _: JClass<'a>,
     ) -> JString<'a> {
-        let mut buf = String::new();
-        if let Ok(mut ctrl) = UnixStream::connect(Path::new(CONTROL_PATH)) {
-            let _ = ctrl.read_to_string(&mut buf);
-        }
+        let result = match info() {
+            Ok(res) => res,
+            Err(e) => format!("{:?}", e),
+        };
 
-        env.new_string(buf).unwrap()
+        env.new_string(result).unwrap()
     }
 
     pub(crate) fn run(
@@ -120,14 +127,20 @@ pub mod android {
         let raw_socket_factory = config_socket_factory(&mut config);
         config.with_socket_factory(&raw_socket_factory);
 
-        let ctrl_path = Path::new(CONTROL_PATH);
-        if ctrl_path.exists() {
-            fs::remove_file(ctrl_path)?;
-        }
+        let ctrl_fd =
+            UnixListener::bind_addr(&SocketAddr::from_abstract_name(CONTROL_PATH).unwrap())?;
 
-        config.with_control_fd(UnixListener::bind(ctrl_path)?.as_raw_fd());
+        config.with_control_fd(ctrl_fd.as_raw_fd());
 
         Client::new(config)?.run()
+    }
+
+    pub(crate) fn info() -> Result<String, std::io::Error> {
+        let mut ctrl =
+            UnixStream::connect_addr(&SocketAddr::from_abstract_name(CONTROL_PATH).unwrap())?;
+        let mut buf = String::new();
+        ctrl.read_to_string(&mut buf)?;
+        Ok(buf)
     }
 }
 
@@ -145,21 +158,24 @@ mod test {
         let null_dev = File::open("/dev/null").unwrap();
         let null_fd = null_dev.as_fd().as_raw_fd();
         let join_handle = thread::spawn(move || {
-            let _ = android::run(
+            if let Err(_e) = android::run(
                 null_fd,
-                "localhost:1234".into(),
                 "".into(),
                 "".into(),
                 "".into(),
-                "1.1.1.1".parse().unwrap(),
-                "::1".parse().unwrap(),
                 "".into(),
                 "".into(),
-            );
+                "".into(),
+                "".into(),
+                "".into(),
+            ) {
+                //println!("{:?}", e);
+            }
         });
 
-        drop(null_dev);
+        std::thread::sleep(std::time::Duration::from_secs(1));
 
+        drop(null_dev);
         join_handle.join().unwrap();
     }
 }

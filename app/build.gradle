@@ -3,7 +3,7 @@ apply plugin: 'org.mozilla.rust-android-gradle.rust-android'
 
 android {
     compileSdkVersion 30
-    ndkVersion "22.1.7171670"
+    ndkVersion "25.2.9519653"
 
     defaultConfig {
         applicationId "com.example.android.toyvpn"
@@ -27,5 +27,10 @@ cargo {
     libname = "minivtun"
     targets = ["arm64"]
 	profile = "release"
+}
+
+dependencies {
+    implementation 'com.android.support:appcompat-v7:28.0.0'
+    implementation 'com.android.support.constraint:constraint-layout:2.0.4'
 }
 

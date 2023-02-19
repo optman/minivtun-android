@@ -91,6 +91,11 @@ public class ToyVpnClient extends Activity {
         findViewById(R.id.disconnect).setOnClickListener(v -> {
             startService(getServiceIntent().setAction(ToyVpnService.ACTION_DISCONNECT));
         });
+
+        findViewById(R.id.status).setOnClickListener(v->{
+            Intent intent = new Intent(this, StatusActivity.class);
+            startActivity(intent);
+        });
     }
 
     @Override
