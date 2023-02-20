@@ -25,7 +25,7 @@ android {
 cargo {
     module  = "../rust"
     libname = "minivtun"
-    targets = ["arm64"]
+    targets = ["arm", "arm64"]
 	profile = "release"
 }
 
