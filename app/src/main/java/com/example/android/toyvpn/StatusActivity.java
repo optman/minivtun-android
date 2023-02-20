@@ -30,7 +30,8 @@
           relParent.addView(txtView);
           setContentView(relParent, relParentParam);
 
-		  timer = new CountDownTimer(10000000, 1000){
+		  //stop after 30 seconds to save battery.
+		  timer = new CountDownTimer(30_000, 1_000){
 			  public void onTick(long millisUntilFinished){
 				 String status = new Native().Info();
 				 txtView.setText(status);
