@@ -16,11 +16,15 @@ pub mod android {
     #[cfg(target_os = "linux")]
     use std::os::linux::net::SocketAddrExt;
 
+    use once_cell::sync::Lazy;
     use std::os::unix::io::AsRawFd;
     use std::os::unix::net::{SocketAddr, UnixListener, UnixStream};
     use std::os::unix::prelude::RawFd;
+    use std::sync::RwLock;
 
     const CONTROL_PATH: &str = "minivtun.sock";
+
+    static LAST_ERROR: Lazy<RwLock<String>> = Lazy::new(|| Default::default());
 
     /// # Safety
     #[no_mangle]
@@ -41,6 +45,8 @@ pub mod android {
             android_logger::Config::default().with_min_level(log::Level::Info),
         );
 
+        LAST_ERROR.write().unwrap().clear();
+
         if let Err(err) = run(
             tun_fd,
             env.get_string(svr_addr).unwrap().into(),
@@ -52,6 +58,8 @@ pub mod android {
             env.get_string(secret).unwrap().into(),
             env.get_string(cipher).unwrap().into(),
         ) {
+            *LAST_ERROR.write().unwrap() = format!("{:?}", err);
+
             log::error!("run fail {:?}", err);
         };
     }
@@ -64,7 +72,7 @@ pub mod android {
     ) -> JString<'a> {
         let result = match info() {
             Ok(res) => res,
-            Err(e) => format!("{:?}", e),
+            Err(_) => LAST_ERROR.read().unwrap().clone(),
         };
 
         env.new_string(result).unwrap()
