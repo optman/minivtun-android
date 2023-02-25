@@ -97,12 +97,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d696c370c750c948ada61c69a0ee2cbbb9c50b1019ddb86d9317157a99c2cae"
 
 [[package]]
-name = "boxfnonce"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5988cb1d626264ac94100be357308f29ff7cbdd3b36bda27f450a4ee3f713426"
-
-[[package]]
 name = "byteorder"
 version = "1.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -172,16 +166,6 @@ version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "28d997bd5e24a5928dd43e46dc529867e207907fe0b239c3477d924f7f2ca320"
 dependencies = [
- "libc",
-]
-
-[[package]]
-name = "daemonize"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70c24513e34f53b640819f0ac9f705b673fcf4006d7aab8778bee72ebfc89815"
-dependencies = [
- "boxfnonce",
  "libc",
 ]
 
@@ -377,14 +361,11 @@ dependencies = [
 [[package]]
 name = "minivtun-rs"
 version = "0.1.5"
-source = "git+https://github.com/optman/minivtun-rs?tag=v0.1.5#d4cb02f074bcf0a6cc4a9fa80ac9fac43e08a2d4"
+source = "git+https://github.com/optman/minivtun-rs?rev=3a181c4fe6a0#3a181c4fe6a04da32ac0418f63aaf36d9ca1eb73"
 dependencies = [
  "aes",
  "block-modes",
  "byteorder",
- "clap",
- "daemonize",
- "env_logger 0.9.3",
  "ipnet",
  "libc",
  "log",
@@ -392,6 +373,7 @@ dependencies = [
  "nix",
  "num_enum",
  "packet",
+ "pretty-duration",
  "rand",
  "rndz",
  "size",
@@ -525,6 +507,12 @@ name = "pin-project-lite"
 version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e0a7ae3ac2f1173085d398531c705756c94a4c56843785df85a60c1a0afac116"
+
+[[package]]
+name = "pretty-duration"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8868e7264af614b3634ff0abbe37b178e61000611b8a75221aea40221924aba"
 
 [[package]]
 name = "proc-macro-crate"
