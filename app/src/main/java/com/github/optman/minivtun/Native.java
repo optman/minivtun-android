@@ -1,5 +1,7 @@
 package com.github.optman.minivtun;
 
+import org.json.JSONObject;
+import org.json.JSONException;
 import com.example.android.toyvpn.ToyVpnConfig;
 
 public class Native {
@@ -10,16 +12,24 @@ public class Native {
     public Native(){
     }
     public void Run(int tun, ToyVpnConfig config){
-        run(    tun,
-                config.server,
-                config.rndzServer,
-                config.rndzRemoteId,
-                config.rndzLocalId,
-                config.localIpv4,
-                config.localIpv6,
-                config.secret,
-                config.cipher
-                );
+
+		try{
+
+		JSONObject params = new JSONObject();
+		params.put("tun", tun);
+		params.put("svr_addr", config.server);
+		params.put("rndz_svr_addr", config.rndzServer);
+		params.put("rndz_remote_id", config.rndzRemoteId);
+		params.put("rndz_local_id", config.rndzLocalId);
+		params.put("local_ip_v4", config.localIpv4);
+		params.put("local_ip_v6",config.localIpv6);
+		params.put("secret", config.secret);
+		params.put("cipher", config.cipher);
+
+        run(params.toString());
+
+		}catch(JSONException e){ }
+
     }
 
     public String Info(){
@@ -27,16 +37,7 @@ public class Native {
     }
 
 
-    private static native void run(int tun,
-                                   String serverAddr,
-                                   String rndzServer,
-                                   String rndzRemoteId,
-                                   String rndzLocalId,
-                                   String localIp4,
-                                   String localIp6,
-                                   String secret,
-                                   String cipher
-                                   );
+    private static native void run(String params);
 
     private static native String info();
 

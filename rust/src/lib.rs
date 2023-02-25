@@ -6,7 +6,6 @@ mod android {
     mod jni {
         use super::native::*;
         use jni::objects::{JClass, JString};
-        use jni::sys::jint;
         use jni::JNIEnv;
 
         /// # Safety
@@ -14,15 +13,7 @@ mod android {
         unsafe extern "C" fn Java_com_github_optman_minivtun_Native_run(
             env: JNIEnv,
             _: JClass,
-            tun_fd: jint,
-            svr_addr: JString,
-            rndz_svr_addr: JString,
-            rndz_remote_id: JString,
-            rndz_local_id: JString,
-            local_ip_v4: JString,
-            local_ip_v6: JString,
-            secret: JString,
-            cipher: JString,
+            params: JString,
         ) {
             android_logger::init_once(
                 android_logger::Config::default().with_min_level(log::Level::Info),
@@ -30,20 +21,13 @@ mod android {
 
             LAST_ERROR.write().unwrap().clear();
 
-            if let Err(err) = run(
-                tun_fd,
-                env.get_string(svr_addr).unwrap().into(),
-                env.get_string(rndz_svr_addr).unwrap().into(),
-                env.get_string(rndz_remote_id).unwrap().into(),
-                env.get_string(rndz_local_id).unwrap().into(),
-                env.get_string(local_ip_v4).unwrap().into(),
-                env.get_string(local_ip_v6).unwrap().into(),
-                env.get_string(secret).unwrap().into(),
-                env.get_string(cipher).unwrap().into(),
-            ) {
-                *LAST_ERROR.write().unwrap() = format!("{:?}", err);
+            let run = || -> Result<(), Box<dyn std::error::Error>> {
+                let params: Params = serde_json::from_str(env.get_string(params)?.to_str()?)?;
+                run(params)
+            };
 
-                log::error!("run fail {:?}", err);
+            if let Err(err) = run() {
+                *LAST_ERROR.write().unwrap() = format!("{:?}", err);
             };
         }
 
@@ -74,25 +58,41 @@ mod android {
         use std::os::linux::net::SocketAddrExt;
 
         use once_cell::sync::Lazy;
+        use serde::Deserialize;
         use std::os::unix::io::AsRawFd;
         use std::os::unix::net::{SocketAddr, UnixListener, UnixStream};
         use std::os::unix::prelude::RawFd;
         use std::sync::RwLock;
 
         pub(crate) const CONTROL_PATH: &str = "minivtun.sock";
+        pub(crate) static LAST_ERROR: Lazy<RwLock<String>> = Lazy::new(Default::default);
 
-        pub(crate) static LAST_ERROR: Lazy<RwLock<String>> = Lazy::new(|| Default::default());
-        pub(crate) fn run(
-            tun: RawFd,
-            svr_addr: String,
-            rndz_svr_addr: String,
-            rndz_remote_id: String,
-            rndz_local_id: String,
-            local_ip_v4: String,
-            local_ip_v6: String,
-            secret: String,
-            cipher: String,
-        ) -> Result<(), Box<dyn std::error::Error>> {
+        #[derive(Default, Deserialize)]
+        pub(crate) struct Params {
+            pub(crate) tun: RawFd,
+            pub(crate) svr_addr: String,
+            pub(crate) rndz_svr_addr: String,
+            pub(crate) rndz_remote_id: String,
+            pub(crate) rndz_local_id: String,
+            pub(crate) local_ip_v4: String,
+            pub(crate) local_ip_v6: String,
+            pub(crate) secret: String,
+            pub(crate) cipher: String,
+        }
+
+        pub(crate) fn run(params: Params) -> Result<(), Box<dyn std::error::Error>> {
+            let Params {
+                tun,
+                svr_addr,
+                rndz_svr_addr,
+                rndz_remote_id,
+                rndz_local_id,
+                local_ip_v4,
+                local_ip_v6,
+                secret,
+                cipher,
+                ..
+            } = params;
             log::info!(
                 "svr_addr {}, local_ip_v4 {}, local_ip_v6 {}",
                 svr_addr,
@@ -159,7 +159,7 @@ mod android {
 
 #[cfg(test)]
 mod test {
-    use super::android::native::run;
+    use super::android::native::{run, Params};
     use std::{
         fs::File,
         os::unix::prelude::{AsFd, AsRawFd},
@@ -170,18 +170,12 @@ mod test {
     fn run_stop() {
         let null_dev = File::open("/dev/null").unwrap();
         let null_fd = null_dev.as_fd().as_raw_fd();
+        let params = Params {
+            tun: null_fd,
+            ..Default::default()
+        };
         let join_handle = thread::spawn(move || {
-            if let Err(_e) = run(
-                null_fd,
-                "".into(),
-                "".into(),
-                "".into(),
-                "".into(),
-                "".into(),
-                "".into(),
-                "".into(),
-                "".into(),
-            ) {
+            if let Err(_e) = run(params) {
                 //println!("{:?}", e);
             }
         });
