@@ -21,6 +21,21 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="3mm">
+        <Button
+            android:id="@+id/delete"
+            style="@style/item"
+            android:text="DELETE!"
+            android:textColor="#E90E63"
+            android:textStyle="bold" />
+
+        <View
+            android:id="@+id/divider2"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?android:attr/listDivider" />
+
+        <TextView style="@style/item" android:text="Server Name:"/>
+        <EditText style="@style/item" android:id="@+id/server_name"/>
 
         <TextView style="@style/item" android:text="@string/server_address"/>
         <EditText style="@style/item" android:id="@+id/server_address"/>
@@ -52,9 +67,12 @@
         <TextView style="@style/item" android:text="NameServers:"/>
         <EditText style="@style/item" android:id="@+id/dns"/>
 
-        <Button style="@style/item" android:id="@+id/connect" android:text="@string/connect"/>
-        <Button style="@style/item" android:id="@+id/disconnect" android:text="@string/disconnect"/>
-        <Button style="@style/item" android:id="@+id/status" android:text="Status"/>
+        <Button
+            android:id="@+id/save"
+            style="@style/item"
+            android:text="Save"
+            android:textStyle="bold" />
+
 
     </LinearLayout>
 </ScrollView>

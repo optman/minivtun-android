@@ -32,7 +32,8 @@ import android.util.Log;
 import android.util.Pair;
 import android.widget.Toast;
 
-import com.github.optman.minivtun.Native;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -42,6 +43,8 @@ public class ToyVpnService extends VpnService implements Handler.Callback {
 
     public static final String ACTION_CONNECT = "com.example.android.toyvpn.START";
     public static final String ACTION_DISCONNECT = "com.example.android.toyvpn.STOP";
+
+    public static final String PARAM_VPN_CONFIG = "vpn_config";
 
     private Handler mHandler;
 
@@ -56,6 +59,8 @@ public class ToyVpnService extends VpnService implements Handler.Callback {
 
     private PendingIntent mConfigureIntent;
 
+    private JSONObject vpnConfig;
+
     @Override
     public void onCreate() {
         // The handler is only used to show messages.
@@ -64,7 +69,7 @@ public class ToyVpnService extends VpnService implements Handler.Callback {
         }
 
         // Create the intent to "configure" the connection (just start ToyVpnClient).
-        mConfigureIntent = PendingIntent.getActivity(this, 0, new Intent(this, ToyVpnClient.class),
+        mConfigureIntent = PendingIntent.getActivity(this, 0, new Intent(this, ServerInfoActivity.class),
                 PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
@@ -74,6 +79,13 @@ public class ToyVpnService extends VpnService implements Handler.Callback {
             disconnect();
             return START_NOT_STICKY;
         } else {
+
+            try {
+                vpnConfig = new JSONObject(intent.getStringExtra(PARAM_VPN_CONFIG));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
             connect();
             return START_STICKY;
         }
@@ -99,8 +111,7 @@ public class ToyVpnService extends VpnService implements Handler.Callback {
         //updateForegroundNotification(R.string.connecting);
         mHandler.sendEmptyMessage(R.string.connecting);
 
-        final SharedPreferences prefs = getSharedPreferences(ToyVpnClient.Prefs.NAME, MODE_PRIVATE);
-        startConnection(new ToyVpnConnection( this, new ToyVpnConfig(prefs)));
+        startConnection(new ToyVpnConnection( this, new ToyVpnConfig(vpnConfig)));
     }
 
     private void startConnection(final ToyVpnConnection connection){

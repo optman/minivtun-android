@@ -6,7 +6,22 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <application android:label="@string/app" android:theme="@style/Theme.AppCompat.Light" >
+    <application
+        android:label="@string/app"
+        android:theme="@style/Theme.AppCompat.Light">
+        <activity
+            android:name=".ServerListActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="" />
+        </activity>
         <activity
             android:name=".StatusActivity"
             android:exported="false">
@@ -15,13 +30,11 @@
                 android:value="" />
         </activity>
         <activity
-            android:name=".ToyVpnClient"
-            android:exported="true"
-            android:configChanges="orientation|keyboardHidden">
+            android:name=".ServerInfoActivity"
+            android:configChanges="orientation|keyboardHidden"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
