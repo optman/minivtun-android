@@ -16,15 +16,19 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Status" />
+
         <ListView
             android:id="@+id/serverListView"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"/>
-        <Button
+
+        <android.support.design.widget.FloatingActionButton
             android:id="@+id/add"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Add" />
+            android:layout_gravity="bottom|right|end"
+            android:clickable="true"
+            app:srcCompat="@android:drawable/ic_input_add" />
 
     </LinearLayout>
 
