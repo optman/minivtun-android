@@ -20,10 +20,9 @@ package com.example.android.toyvpn;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
  */
+
 import android.app.PendingIntent;
 import android.content.Intent;
-
-import android.content.SharedPreferences;
 import android.net.VpnService;
 import android.os.Handler;
 import android.os.Looper;

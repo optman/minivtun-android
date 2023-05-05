@@ -1,11 +1,10 @@
     package com.example.android.toyvpn;
 
-    import android.support.v7.app.AppCompatActivity;
     import android.os.Bundle;
-    import android.util.Log;
+    import android.os.CountDownTimer;
+    import android.support.v7.app.AppCompatActivity;
     import android.widget.RelativeLayout;
     import android.widget.TextView;
-	import android.os.CountDownTimer;
 
     import com.github.optman.minivtun.Native;
 

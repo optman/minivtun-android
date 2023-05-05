@@ -22,9 +22,10 @@ import android.content.pm.PackageManager;
 import android.net.VpnService;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
-import java.io.IOException;
 
 import com.github.optman.minivtun.Native;
+
+import java.io.IOException;
 
 public class ToyVpnConnection implements Runnable {
     /**

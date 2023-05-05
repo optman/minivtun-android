@@ -17,7 +17,7 @@ public class ToyVpnConfig {
     public String routes;
     public String dns;
 
-    public static interface json {
+    public interface json {
         String SERVER_NAME = "server_name";
         String SERVER_ADDRESS = "server_address";
         String RNDZ_SERVER_ADDRESS = "rndz_server_address";

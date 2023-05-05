@@ -1,8 +1,9 @@
 package com.github.optman.minivtun;
 
-import org.json.JSONObject;
-import org.json.JSONException;
 import com.example.android.toyvpn.ToyVpnConfig;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class Native {
     static {
