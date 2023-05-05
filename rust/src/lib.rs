@@ -1,4 +1,3 @@
-#![feature(tcp_quickack)]
 #[allow(non_snake_case)]
 mod android {
 
