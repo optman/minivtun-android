@@ -1,0 +1,7 @@
+rust/target
+app/build
+build
+.gradle/
+.idea/
+local.properties
+

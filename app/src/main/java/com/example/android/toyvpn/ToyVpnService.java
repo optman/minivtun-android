@@ -26,6 +26,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.VpnService;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
@@ -65,7 +66,7 @@ public class ToyVpnService extends VpnService implements Handler.Callback {
     public void onCreate() {
         // The handler is only used to show messages.
         if (mHandler == null) {
-            mHandler = new Handler(this);
+            mHandler = new Handler(Looper.getMainLooper());
         }
 
         // Create the intent to "configure" the connection (just start ToyVpnClient).

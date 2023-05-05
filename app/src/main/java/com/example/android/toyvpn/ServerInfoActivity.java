@@ -18,7 +18,6 @@ package com.example.android.toyvpn;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -61,17 +60,17 @@ public class ServerInfoActivity extends Activity {
         try {
             if (position >= 0) {
                 data = new JSONObject(getIntent().getStringExtra(PARAM_DATA));
-                serverName.setText(data.getString(Prefs.SERVER_NAME));
-                serverAddress.setText(data.getString(Prefs.SERVER_ADDRESS));
-                rndzServerAddress.setText(data.getString(Prefs.RNDZ_SERVER_ADDRESS));
-                rndzRemoteId.setText(data.getString(Prefs.RNDZ_REMOTE_ID));
-                rndzLocalId.setText(data.getString(Prefs.RNDZ_LOCAL_ID));
-                cipher.setText(data.getString(Prefs.CIPHER));
-                sharedSecret.setText(data.getString(Prefs.SHARED_SECRET));
-                localIpv4.setText(data.getString(Prefs.LOCAL_IPv4));
-                localIpv6.setText(data.getString(Prefs.LOCAL_IPv6));
-                routes.setText(data.getString(Prefs.ROUTES));
-                dns.setText(data.getString(Prefs.DNS));
+                serverName.setText(data.getString(ToyVpnConfig.json.SERVER_NAME));
+                serverAddress.setText(data.getString(ToyVpnConfig.json.SERVER_ADDRESS));
+                rndzServerAddress.setText(data.getString(ToyVpnConfig.json.RNDZ_SERVER_ADDRESS));
+                rndzRemoteId.setText(data.getString(ToyVpnConfig.json.RNDZ_REMOTE_ID));
+                rndzLocalId.setText(data.getString(ToyVpnConfig.json.RNDZ_LOCAL_ID));
+                cipher.setText(data.getString(ToyVpnConfig.json.CIPHER));
+                sharedSecret.setText(data.getString(ToyVpnConfig.json.SHARED_SECRET));
+                localIpv4.setText(data.getString(ToyVpnConfig.json.LOCAL_IPv4));
+                localIpv6.setText(data.getString(ToyVpnConfig.json.LOCAL_IPv6));
+                routes.setText(data.getString(ToyVpnConfig.json.ROUTES));
+                dns.setText(data.getString(ToyVpnConfig.json.DNS));
             } else {
                 data = new JSONObject();
                 serverName.setText("server name");
@@ -84,17 +83,17 @@ public class ServerInfoActivity extends Activity {
 
         findViewById(R.id.save).setOnClickListener(v -> {
             try {
-                data.put(Prefs.SERVER_NAME, serverName.getText().toString());
-                data.put(Prefs.SERVER_ADDRESS, serverAddress.getText().toString());
-                data.put(Prefs.RNDZ_SERVER_ADDRESS, rndzServerAddress.getText().toString());
-                data.put(Prefs.RNDZ_REMOTE_ID, rndzRemoteId.getText().toString());
-                data.put(Prefs.RNDZ_LOCAL_ID, rndzLocalId.getText().toString());
-                data.put(Prefs.CIPHER, cipher.getText().toString());
-                data.put(Prefs.SHARED_SECRET, sharedSecret.getText().toString());
-                data.put(Prefs.LOCAL_IPv4, localIpv4.getText().toString());
-                data.put(Prefs.LOCAL_IPv6, localIpv6.getText().toString());
-                data.put(Prefs.ROUTES, routes.getText().toString());
-                data.put(Prefs.DNS, dns.getText().toString());
+                data.put(ToyVpnConfig.json.SERVER_NAME, serverName.getText().toString());
+                data.put(ToyVpnConfig.json.SERVER_ADDRESS, serverAddress.getText().toString());
+                data.put(ToyVpnConfig.json.RNDZ_SERVER_ADDRESS, rndzServerAddress.getText().toString());
+                data.put(ToyVpnConfig.json.RNDZ_REMOTE_ID, rndzRemoteId.getText().toString());
+                data.put(ToyVpnConfig.json.RNDZ_LOCAL_ID, rndzLocalId.getText().toString());
+                data.put(ToyVpnConfig.json.CIPHER, cipher.getText().toString());
+                data.put(ToyVpnConfig.json.SHARED_SECRET, sharedSecret.getText().toString());
+                data.put(ToyVpnConfig.json.LOCAL_IPv4, localIpv4.getText().toString());
+                data.put(ToyVpnConfig.json.LOCAL_IPv6, localIpv6.getText().toString());
+                data.put(ToyVpnConfig.json.ROUTES, routes.getText().toString());
+                data.put(ToyVpnConfig.json.DNS, dns.getText().toString());
 
             } catch (JSONException e) {
                 e.printStackTrace();
