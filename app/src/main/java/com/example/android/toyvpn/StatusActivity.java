@@ -1,50 +1,52 @@
-    package com.example.android.toyvpn;
+package com.example.android.toyvpn;
 
-    import android.os.Bundle;
-    import android.os.CountDownTimer;
-    import android.support.v7.app.AppCompatActivity;
-    import android.widget.RelativeLayout;
-    import android.widget.TextView;
+import android.os.Bundle;
+import android.os.CountDownTimer;
+import androidx.appcompat.app.AppCompatActivity;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 
-    import com.github.optman.minivtun.Native;
+import com.github.optman.minivtun.Native;
 
+public class StatusActivity extends AppCompatActivity {
 
-    public class StatusActivity extends AppCompatActivity {
+  protected CountDownTimer timer;
 
-		protected CountDownTimer timer;
+  @Override
+  protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
 
-        @Override
-        protected void onCreate(Bundle savedInstanceState) {
-           super.onCreate(savedInstanceState);
+    RelativeLayout relParent = new RelativeLayout(this);
+    RelativeLayout.LayoutParams relParentParam = new RelativeLayout.LayoutParams(
+        RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT);
+    relParent.setLayoutParams(relParentParam);
 
-           RelativeLayout relParent = new RelativeLayout(this);
-           RelativeLayout.LayoutParams relParentParam = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT);
-           relParent.setLayoutParams(relParentParam);
+    TextView txtView = new TextView(this);
+    RelativeLayout.LayoutParams txtViewParams = new RelativeLayout.LayoutParams(
+        RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+    txtView.setLayoutParams(txtViewParams);
+    txtViewParams.addRule(RelativeLayout.ALIGN_TOP);
 
-          TextView txtView = new TextView(this);
-          RelativeLayout.LayoutParams txtViewParams = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
-          txtView.setLayoutParams(txtViewParams);
-          txtViewParams.addRule(RelativeLayout.ALIGN_TOP);
+    relParent.addView(txtView);
+    setContentView(relParent, relParentParam);
 
-          relParent.addView(txtView);
-          setContentView(relParent, relParentParam);
+    // stop after 30 seconds to save battery.
+    timer = new CountDownTimer(30_000, 1_000) {
+      public void onTick(long millisUntilFinished) {
+        String status = Native.Info();
+        txtView.setText(status);
+      }
 
-		  //stop after 30 seconds to save battery.
-		  timer = new CountDownTimer(30_000, 1_000){
-			  public void onTick(long millisUntilFinished){
-				 String status = new Native().Info();
-				 txtView.setText(status);
-			  }
-			  public void onFinish(){} 
-		  };
-		  timer.start();
-		}
-        
-		@Override
-        protected void onDestroy(){
-		    timer.cancel();
-		    super.onDestroy();
-		}
+      public void onFinish() {
+      }
+    };
+    timer.start();
+  }
 
+  @Override
+  protected void onDestroy() {
+    timer.cancel();
+    super.onDestroy();
+  }
 
-   }
+}

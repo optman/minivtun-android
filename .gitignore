@@ -4,4 +4,6 @@ build
 .gradle/
 .idea/
 local.properties
+.vscode
+.aider*
 

@@ -1,5 +1,8 @@
 package com.example.android.toyvpn;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -16,6 +19,8 @@ public class ToyVpnConfig {
     public String localIpv6;
     public String routes;
     public String dns;
+    public VpnMode vpnMode;
+    public List<String> selectedApps;
 
     public interface json {
         String SERVER_NAME = "server_name";
@@ -29,6 +34,8 @@ public class ToyVpnConfig {
         String LOCAL_IPv6 = "local_ipv6";
         String ROUTES = "routes";
         String DNS = "dns";
+        String VPN_MODE = "vpn_mode";
+        String SELECTED_APPS = "selected_apps";
     }
 
     public ToyVpnConfig(JSONObject svr) {
@@ -44,10 +51,13 @@ public class ToyVpnConfig {
             localIpv6 = svr.getString(json.LOCAL_IPv6);
             routes = svr.getString(json.ROUTES);
             dns = svr.getString(json.DNS);
+
+            vpnMode = VpnMode.valueOf(svr.optString(json.VPN_MODE, VpnMode.APPLY_TO_ALL.name()));
+            selectedApps = svr.optJSONArray(json.SELECTED_APPS) != null
+                    ? Utils.jsonArrayToList(svr.optJSONArray(json.SELECTED_APPS))
+                    : new ArrayList<>();
         } catch (JSONException e) {
             e.printStackTrace();
         }
     }
-
-
 }

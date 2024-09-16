@@ -16,20 +16,26 @@
 
 package com.example.android.toyvpn;
 
-
 import android.app.PendingIntent;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.VpnService;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
-import com.github.optman.minivtun.Native;
-
+import java.io.FileDescriptor;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+
+import com.github.optman.minivtun.Native;
+import com.github.optman.minivtun.Client;
 
 public class ToyVpnConnection implements Runnable {
     /**
-     * Callback interface to let the {@link ToyVpnService} know about new connections
+     * Callback interface to let the {@link ToyVpnService} know about new
+     * connections
      * and update the foreground notification with connection status.
      */
     public interface OnEstablishListener {
@@ -39,17 +45,21 @@ public class ToyVpnConnection implements Runnable {
     private final VpnService mService;
     private final ToyVpnConfig mConfig;
 
-
     private PendingIntent mConfigureIntent;
     private OnEstablishListener mOnEstablishListener;
 
-    public ToyVpnConnection(final VpnService service, final ToyVpnConfig config ) {
+    private Client client;
+
+    public static final String ACTION_VPN_DISCONNECTED = "com.example.android.toyvpn.VPN_DISCONNECTED";
+
+    public ToyVpnConnection(final VpnService service, final ToyVpnConfig config) {
         mService = service;
         mConfig = config;
     }
 
     /**
-     * Optionally, set an intent to configure the VPN. This is {@code null} by default.
+     * Optionally, set an intent to configure the VPN. This is {@code null} by
+     * default.
      */
     public void setConfigureIntent(PendingIntent intent) {
         mConfigureIntent = intent;
@@ -59,24 +69,32 @@ public class ToyVpnConnection implements Runnable {
         mOnEstablishListener = listener;
     }
 
-    @Override
-    public void run(){
-        Log.i(getTag(), "Starting");
-        ParcelFileDescriptor iface = null;
-        // Create a DatagramChannel as the VPN tunnel.
-        try{
-            // configure the virtual network interface.
-            iface = configure();
-            new Native().Run(
-                    iface.getFd(),
-                    mConfig
-                    );
-
-        } catch (Exception e){
-            Log.e(getTag(), "config inteface fail", e);
+    public void stop() {
+        if (client != null) {
+            client.stop();
         }
-        finally {
-            Log.i(getTag(), "run exit");
+    }
+
+    @Override
+    public void run() {
+        Log.i(getTag(), "Starting");
+        Intent intent = new Intent(ACTION_VPN_DISCONNECTED)
+                .setPackage(mService.getPackageName());
+        ParcelFileDescriptor iface = null;
+        client = Native.prepare(mConfig);
+        if (client == null) {
+            Log.e(getTag(), "prepare config fail");
+            mService.sendBroadcast(intent);
+            return;
+        }
+        try {
+            iface = configure();
+            mService.protect(client.socket);
+            client.run(iface.detachFd());
+        } catch (Exception e) {
+            Log.e(getTag(), "vpn exit", e);
+        } finally {
+            client.free();
             if (iface != null) {
                 try {
                     iface.close();
@@ -85,14 +103,14 @@ public class ToyVpnConnection implements Runnable {
                 }
             }
         }
+        mService.sendBroadcast(intent);
     }
-
 
     private ParcelFileDescriptor configure() throws PackageManager.NameNotFoundException {
         // Configure a builder while parsing the parameters.
         VpnService.Builder builder = mService.new Builder();
 
-        for (String ip : new String[]{mConfig.localIpv4, mConfig.localIpv6}){
+        for (String ip : new String[] { mConfig.localIpv4, mConfig.localIpv6 }) {
             String[] parts = ip.split("/");
             if (parts.length == 2) {
                 builder.addAddress(parts[0], Integer.parseInt(parts[1]));
@@ -113,7 +131,15 @@ public class ToyVpnConnection implements Runnable {
 
         builder.setMtu(1300);
 
-        builder.addDisallowedApplication( BuildConfig.APPLICATION_ID);
+        if (mConfig.vpnMode.equals(VpnMode.ALLOW_SELECTED)) {
+            for (String app : mConfig.selectedApps) {
+                builder.addAllowedApplication(app);
+            }
+        } else if (mConfig.vpnMode.equals(VpnMode.DISALLOW_SELECTED)) {
+            for (String app : mConfig.selectedApps) {
+                builder.addDisallowedApplication(app);
+            }
+        }
 
         builder.setSession(mConfig.server).setConfigureIntent(mConfigureIntent);
         ParcelFileDescriptor vpnInterface;
@@ -123,7 +149,7 @@ public class ToyVpnConnection implements Runnable {
                 mOnEstablishListener.onEstablish(vpnInterface);
             }
         }
-        Log.i(getTag(), "New interface: " + vpnInterface );
+        Log.i(getTag(), "New interface: " + vpnInterface);
         return vpnInterface;
     }
 

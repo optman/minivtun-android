@@ -2,11 +2,13 @@ package com.example.android.toyvpn;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.net.VpnService;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
+import android.os.Build;
+import androidx.appcompat.app.AppCompatActivity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -20,6 +22,9 @@ import android.widget.ListView;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.core.content.ContextCompat;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import android.graphics.Color;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -31,12 +36,18 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 
+import android.content.BroadcastReceiver;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+
 public class ServerListActivity extends AppCompatActivity {
 
     private static final int REQUEST_SEVER_INFO = 0;
     private static final int REQUEST_CONNECT = 1;
     private static final int REQUEST_EXPORT_PICKFILE = 2;
     private static final int REQUEST_IMPORT_PICKFILE = 3;
+
+    private BroadcastReceiver vpnDisconnectReceiver;
 
     public interface Config {
         String CONFIG_NAME = "CONFIG";
@@ -52,10 +63,8 @@ public class ServerListActivity extends AppCompatActivity {
             this.parent = parent;
         }
 
-
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
-
             JSONObject svr = getItem(position);
 
             if (convertView == null) {
@@ -69,14 +78,24 @@ public class ServerListActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
 
-            ((Switch) convertView.findViewById(R.id.conn_switch)).setOnCheckedChangeListener(
-                    new CompoundButton.OnCheckedChangeListener() {
-                        @Override
-                        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                            ServerListAdapter.this.parent.OnCheckedChanged(position, isChecked);
-                        }
-                    }
-            );
+            Switch connSwitch = convertView.findViewById(R.id.conn_switch);
+            connSwitch.setOnCheckedChangeListener(null); // Remove previous listener
+            connSwitch.setChecked(false); // Reset switch state
+
+            connSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                    ServerListAdapter.this.parent.OnCheckedChanged(position, isChecked);
+                }
+            });
+
+            // Make the entire item clickable
+            convertView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    ServerListAdapter.this.parent.onItemClick(position);
+                }
+            });
 
             return convertView;
         }
@@ -87,12 +106,17 @@ public class ServerListActivity extends AppCompatActivity {
     ServerListAdapter adapter;
     int currentPosition;
 
+    private ActivityResultLauncher<Intent> connectLauncher;
+    private ActivityResultLauncher<Intent> serverInfoLauncher;
+    private ActivityResultLauncher<Intent> exportFileLauncher;
+    private ActivityResultLauncher<Intent> importFileLauncher;
+
     private void OnCheckedChanged(int position, boolean isChecked) {
         if (isChecked) {
             currentPosition = position;
             Intent intent = VpnService.prepare(ServerListActivity.this);
             if (intent != null) {
-                startActivityForResult(intent, REQUEST_CONNECT);
+                connectLauncher.launch(intent);
             } else {
                 connectVpn();
             }
@@ -126,71 +150,134 @@ public class ServerListActivity extends AppCompatActivity {
 
         ListView lv = (ListView) findViewById(R.id.serverListView);
         lv.setAdapter(adapter);
+        lv.setDividerHeight(1); // Add a small divider between items
 
-        lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                JSONObject svr = adapter.getItem(position);
-                Intent intent = new Intent(parent.getContext(), ServerInfoActivity.class);
-                intent.putExtra(ServerInfoActivity.PARAM_POSITION, position);
-                intent.putExtra(ServerInfoActivity.PARAM_DATA, svr.toString());
+        // Remove the previous setOnItemClickListener
+        // lv.setOnItemClickListener(...);
 
-                startActivityForResult(intent, REQUEST_SEVER_INFO);
-            }
-        });
         findViewById(R.id.status).setOnClickListener(v -> {
             Intent intent = new Intent(ServerListActivity.this, StatusActivity.class);
             startActivity(intent);
         });
-        findViewById(R.id.add).setOnClickListener(v -> {
+        FloatingActionButton addButton = findViewById(R.id.add);
+        addButton.setBackgroundTintList(ContextCompat.getColorStateList(this, R.color.colorAccent));
+        addButton.setOnClickListener(v -> {
             Intent intent = new Intent(ServerListActivity.this, ServerInfoActivity.class);
             intent.putExtra(ServerInfoActivity.PARAM_POSITION, -1);
 
-            startActivityForResult(intent, REQUEST_SEVER_INFO);
+            serverInfoLauncher.launch(intent);
         });
 
+        // Register broadcast receiver
+        vpnDisconnectReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (ToyVpnConnection.ACTION_VPN_DISCONNECTED.equals(intent.getAction())) {
+                    uncheckCurrentItem();
+                }
+            }
+        };
+
+        IntentFilter filter = new IntentFilter(ToyVpnConnection.ACTION_VPN_DISCONNECTED);
+        ContextCompat.registerReceiver(this, vpnDisconnectReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
+
+        // Register activity result launchers
+        connectLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK) {
+                        connectVpn();
+                    }
+                });
+
+        serverInfoLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK) {
+                        handleServerInfoResult(result.getData());
+                    }
+                });
+
+        exportFileLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK) {
+                        handleExportResult(result.getData());
+                    }
+                });
+
+        importFileLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK) {
+                        handleImportResult(result.getData());
+                    }
+                });
     }
 
+    // Add this method to handle item clicks
+    private void onItemClick(int position) {
+        JSONObject svr = adapter.getItem(position);
+        Intent intent = new Intent(this, ServerInfoActivity.class);
+        intent.putExtra(ServerInfoActivity.PARAM_POSITION, position);
+        intent.putExtra(ServerInfoActivity.PARAM_DATA, svr.toString());
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_SEVER_INFO && resultCode == RESULT_OK) {
-            int result = data.getIntExtra(ServerInfoActivity.RESULT_CODE, ServerInfoActivity.RESULT_NONE);
-            int position = data.getIntExtra(ServerInfoActivity.PARAM_POSITION, -1);
-            boolean save = false;
-            switch (result) {
-                case ServerInfoActivity.RESULT_SAVE:
-                    //add or update.
-                    try {
-                        JSONObject svr = new JSONObject(data.getStringExtra(ServerInfoActivity.PARAM_DATA));
-                        if (position >= 0) {
-                            this.serverList.set(position, svr);
-                        } else {
-                            this.serverList.add(svr);
-                        }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                        return;
+        serverInfoLauncher.launch(intent);
+    }
+
+    // Replace onActivityResult with separate methods
+    private void handleServerInfoResult(Intent data) {
+        int result = data.getIntExtra(ServerInfoActivity.RESULT_CODE, ServerInfoActivity.RESULT_NONE);
+        int position = data.getIntExtra(ServerInfoActivity.PARAM_POSITION, -1);
+        boolean save = false;
+        switch (result) {
+            case ServerInfoActivity.RESULT_SAVE:
+                // add or update.
+                try {
+                    JSONObject svr = new JSONObject(data.getStringExtra(ServerInfoActivity.PARAM_DATA));
+                    if (position >= 0) {
+                        this.serverList.set(position, svr);
+                    } else {
+                        this.serverList.add(svr);
                     }
-                    adapter.notifyDataSetChanged();
-                    save = true;
-                    break;
-                case ServerInfoActivity.RESULT_DELETE:
-                    this.serverList.remove(position);
-                    save = true;
-                    break;
-                default:
-                    break;
-            }
-            if (save) {
-                savePrefs();
-            }
-        } else if (requestCode == REQUEST_CONNECT && resultCode == RESULT_OK) {
-            connectVpn();
-        } else if (requestCode == REQUEST_IMPORT_PICKFILE && resultCode == RESULT_OK) {
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                    return;
+                }
+                adapter.notifyDataSetChanged();
+                save = true;
+                break;
+            case ServerInfoActivity.RESULT_DELETE:
+                this.serverList.remove(position);
+                save = true;
+                break;
+            default:
+                break;
+        }
+        if (save) {
+            savePrefs();
+        }
+    }
+
+    private void handleExportResult(Intent data) {
+        JSONArray j = new JSONArray();
+        for (int i = 0; i < serverList.size(); i++) {
+            j.put(serverList.get(i));
+        }
+        try {
+            Uri dest = data.getData();
+            OutputStream fos = this.getContentResolver().openOutputStream(dest);
+            fos.write(j.toString(4).getBytes());
+            fos.close();
+
+            Toast.makeText(this, "saved!", Toast.LENGTH_SHORT).show();
+
+        } catch (JSONException | IOException e) {
+            Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void handleImportResult(Intent data) {
+        try {
+            Uri dest = data.getData();
+            InputStream in = this.getContentResolver().openInputStream(dest);
             try {
-                Uri dest = data.getData();
-                InputStream in = this.getContentResolver().openInputStream(dest);
                 ByteArrayOutputStream buffer = new ByteArrayOutputStream();
                 int nRead;
                 byte[] buf = new byte[4096];
@@ -201,27 +288,17 @@ public class ServerListActivity extends AppCompatActivity {
                 updateServerList(json);
                 adapter.notifyDataSetChanged();
                 savePrefs();
-            } catch (JSONException | IOException e) {
-                e.printStackTrace();
+            } finally {
+                if (in != null) {
+                    try {
+                        in.close();
+                    } catch (IOException e) {
+                        // Log the exception
+                    }
+                }
             }
-
-        } else if (requestCode == REQUEST_EXPORT_PICKFILE && resultCode == RESULT_OK) {
-
-            JSONArray j = new JSONArray();
-            for (int i = 0; i < serverList.size(); i++) {
-                j.put(serverList.get(i));
-            }
-            try {
-                Uri dest = data.getData();
-                OutputStream fos = this.getContentResolver().openOutputStream(dest);
-                fos.write(j.toString(4).getBytes());
-                fos.close();
-
-                Toast.makeText(this, "saved!", Toast.LENGTH_SHORT).show();
-
-            } catch (JSONException | IOException e) {
-                Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
-            }
+        } catch (JSONException | IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -248,45 +325,56 @@ public class ServerListActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.export_list:
-                return export_list();
-            case R.id.import_list:
-                return import_list();
-            default:
-                return super.onOptionsItemSelected(item);
+        int itemId = item.getItemId();
+        if (itemId == R.id.export_list) {
+            exportServerList();
+            return true;
+        } else if (itemId == R.id.import_list) {
+            importServerList();
+            return true;
         }
+        return super.onOptionsItemSelected(item);
     }
 
-
-    private boolean export_list() {
+    private void exportServerList() {
         Intent chooseFile = new Intent(Intent.ACTION_CREATE_DOCUMENT);
         chooseFile.addCategory(Intent.CATEGORY_OPENABLE);
         chooseFile.setType("text/json");
-        startActivityForResult(
-                Intent.createChooser(chooseFile, "Choose destination file"),
-                REQUEST_EXPORT_PICKFILE
-        );
-        return true;
+        exportFileLauncher.launch(chooseFile);
     }
 
-    private boolean import_list() {
+    private void importServerList() {
         Intent chooseFile = new Intent(Intent.ACTION_GET_CONTENT);
         chooseFile.addCategory(Intent.CATEGORY_OPENABLE);
         chooseFile.setType("text/json");
-        startActivityForResult(
-                Intent.createChooser(chooseFile, "Choose source file"),
-                REQUEST_IMPORT_PICKFILE
-        );
-
-        return true;
+        importFileLauncher.launch(chooseFile);
     }
 
     private void savePrefs() {
         final SharedPreferences prefs = getSharedPreferences(Config.CONFIG_NAME, MODE_PRIVATE);
-        prefs.edit().putString(Config.SERVER_LIST, new JSONArray(this.serverList).toString()).commit();
+        prefs.edit().putString(Config.SERVER_LIST, new JSONArray(this.serverList).toString()).apply();
     }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // Unregister broadcast receiver
+        if (vpnDisconnectReceiver != null) {
+            unregisterReceiver(vpnDisconnectReceiver);
+        }
+    }
+
+    private void uncheckCurrentItem() {
+        runOnUiThread(() -> {
+            ListView lv = findViewById(R.id.serverListView);
+            View view = lv.getChildAt(currentPosition - lv.getFirstVisiblePosition());
+            if (view != null) {
+                Switch connSwitch = view.findViewById(R.id.conn_switch);
+                if (connSwitch != null) {
+                    connSwitch.setChecked(false);
+                }
+            }
+        });
+    }
+
 }
-
-
-

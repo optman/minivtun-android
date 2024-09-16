@@ -1,17 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-sdk android:minSdkVersion="21" />
-
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <queries>
+      <intent>
+        <action android:name="android.intent.action.MAIN" />
+      </intent>
+    </queries>
+
     <application
+        android:icon="@drawable/ic_vpn"
         android:label="@string/app"
         android:theme="@style/Theme.AppCompat.Light">
+
+        <meta-data
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        android:value="This app needs to query all packages to allow users to select which apps to include or exclude from VPN." />
+
         <activity
             android:name=".ServerListActivity"
-            android:exported="true">
+            android:exported="true"
+            android:label="Minivtun">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -24,7 +35,8 @@
         </activity>
         <activity
             android:name=".StatusActivity"
-            android:exported="false">
+            android:exported="false"
+            android:label="Minivtun">
             <meta-data
                 android:name="android.app.lib_name"
                 android:value="" />
@@ -32,7 +44,8 @@
         <activity
             android:name=".ServerInfoActivity"
             android:configChanges="orientation|keyboardHidden"
-            android:exported="true">
+            android:exported="true"
+            android:label="Minivtun">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@+id/export_list"
-        android:title="export"/>
+        android:title="@string/export_list"/>
     <item
         android:id="@+id/import_list"
-        android:title="import" />
+        android:title="@string/import_list" />
 </menu>

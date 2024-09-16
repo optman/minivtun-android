@@ -48,9 +48,15 @@ public class ToyVpnService extends VpnService implements Handler.Callback {
 
     private Handler mHandler;
 
-    private static class Connection extends Pair<Thread, ParcelFileDescriptor> {
-        public Connection(Thread thread, ParcelFileDescriptor pfd) {
-            super(thread, pfd);
+    private static class Connection {
+        Thread thread;
+        ParcelFileDescriptor pfd;
+        ToyVpnConnection connection;
+
+        public Connection(Thread thread, ParcelFileDescriptor pfd, ToyVpnConnection connection) {
+            this.thread = thread;
+            this.pfd = pfd;
+            this.connection = connection;
         }
     }
 
@@ -69,8 +75,11 @@ public class ToyVpnService extends VpnService implements Handler.Callback {
         }
 
         // Create the intent to "configure" the connection (just start ToyVpnClient).
-        mConfigureIntent = PendingIntent.getActivity(this, 0, new Intent(this, ServerInfoActivity.class),
-                PendingIntent.FLAG_UPDATE_CURRENT);
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            flags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+        mConfigureIntent = PendingIntent.getActivity(this, 0, new Intent(this, ServerInfoActivity.class), flags);
     }
 
     @Override
@@ -100,22 +109,23 @@ public class ToyVpnService extends VpnService implements Handler.Callback {
     public boolean handleMessage(Message message) {
         Toast.makeText(this, message.what, Toast.LENGTH_SHORT).show();
         if (message.what != R.string.disconnected) {
-            //updateForegroundNotification(message.what);
+            // updateForegroundNotification(message.what);
         }
         return true;
     }
 
     private void connect() {
-        // Become a foreground service. Background services can be VPN services too, but they can
+        // Become a foreground service. Background services can be VPN services too, but
+        // they can
         // be killed by background check before getting a chance to receive onRevoke().
-        //updateForegroundNotification(R.string.connecting);
+        // updateForegroundNotification(R.string.connecting);
         mHandler.sendEmptyMessage(R.string.connecting);
 
-        startConnection(new ToyVpnConnection( this, new ToyVpnConfig(vpnConfig)));
+        startConnection(new ToyVpnConnection(this, new ToyVpnConfig(vpnConfig)));
     }
 
-    private void startConnection(final ToyVpnConnection connection){
-        // Replace any existing connecting thread with the  new one.
+    private void startConnection(final ToyVpnConnection connection) {
+        // Replace any existing connecting thread with the new one.
         final Thread thread = new Thread(connection, "ToyVpnThread");
         setConnectingThread(thread);
 
@@ -125,7 +135,7 @@ public class ToyVpnService extends VpnService implements Handler.Callback {
             mHandler.sendEmptyMessage(R.string.connected);
 
             mConnectingThread.compareAndSet(thread, null);
-            setConnection(new Connection(thread, tunInterface));
+            setConnection(new Connection(thread, tunInterface, connection));
         });
         thread.start();
     }
@@ -141,8 +151,9 @@ public class ToyVpnService extends VpnService implements Handler.Callback {
         final Connection oldConnection = mConnection.getAndSet(connection);
         if (oldConnection != null) {
             try {
-                oldConnection.first.interrupt();
-                oldConnection.second.close();
+                oldConnection.connection.stop();
+                oldConnection.pfd.close();
+                oldConnection.thread.interrupt();
             } catch (IOException e) {
                 Log.e(TAG, "Closing VPN interface", e);
             }
@@ -153,20 +164,26 @@ public class ToyVpnService extends VpnService implements Handler.Callback {
         mHandler.sendEmptyMessage(R.string.disconnected);
         setConnectingThread(null);
         setConnection(null);
-        stopForeground(true);
+        stopForegroundService();
     }
-/*
-    private void updateForegroundNotification(final int message) {
-        final String NOTIFICATION_CHANNEL_ID = "ToyVpn";
-        NotificationManager mNotificationManager = (NotificationManager) getSystemService(
-                NOTIFICATION_SERVICE);
-        mNotificationManager.createNotificationChannel(new NotificationChannel(
-                NOTIFICATION_CHANNEL_ID, NOTIFICATION_CHANNEL_ID,
-                NotificationManager.IMPORTANCE_DEFAULT));
-        startForeground(1, new Notification.Builder(this, NOTIFICATION_CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_vpn)
-                .setContentText(getString(message))
-                .setContentIntent(mConfigureIntent)
-                .build());
-    }*/
+
+    private void stopForegroundService() {
+        stopForeground(STOP_FOREGROUND_REMOVE);
+    }
+    /*
+     * private void updateForegroundNotification(final int message) {
+     * final String NOTIFICATION_CHANNEL_ID = "ToyVpn";
+     * NotificationManager mNotificationManager = (NotificationManager)
+     * getSystemService(
+     * NOTIFICATION_SERVICE);
+     * mNotificationManager.createNotificationChannel(new NotificationChannel(
+     * NOTIFICATION_CHANNEL_ID, NOTIFICATION_CHANNEL_ID,
+     * NotificationManager.IMPORTANCE_DEFAULT));
+     * startForeground(1, new Notification.Builder(this, NOTIFICATION_CHANNEL_ID)
+     * .setSmallIcon(R.drawable.ic_vpn)
+     * .setContentText(getString(message))
+     * .setContentIntent(mConfigureIntent)
+     * .build());
+     * }
+     */
 }

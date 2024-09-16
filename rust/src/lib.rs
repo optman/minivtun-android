@@ -2,31 +2,97 @@
 mod android {
 
     mod jni {
-        use super::native::*;
-        use jni::objects::{JClass, JString};
-        use jni::JNIEnv;
+        use jni::sys::jlong;
+        use std::os::fd::RawFd;
 
-        /// # Safety
+        use super::native::*;
+        use jni::objects::{JClass, JObject, JString};
+        use jni::sys::jint;
+        use jni::JNIEnv;
+        use minivtun::Config;
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use std::sync::Arc;
+
         #[no_mangle]
-        unsafe extern "C" fn Java_com_github_optman_minivtun_Native_run(
-            env: JNIEnv,
+        unsafe extern "C" fn Java_com_github_optman_minivtun_Native_prepare<'a>(
+            env: JNIEnv<'a>,
             _: JClass,
             params: JString,
-        ) {
+        ) -> JObject<'a> {
             android_logger::init_once(
                 android_logger::Config::default().with_min_level(log::Level::Info),
             );
 
             LAST_ERROR.write().unwrap().clear();
 
-            let run = || -> Result<(), Box<dyn std::error::Error>> {
+            let prepare = || -> Result<_, Box<dyn std::error::Error>> {
                 let params: Params = serde_json::from_str(env.get_string(params)?.to_str()?)?;
-                run(params)
+                prepare(params)
+            };
+
+            // prepare config
+            let (mut config, socket) = if let Ok((config, socket)) = prepare().map_err(|err| {
+                *LAST_ERROR.write().unwrap() = format!("{:?}", err);
+            }) {
+                (config, socket)
+            } else {
+                return JObject::null();
+            };
+
+            let should_stop: Arc<AtomicBool> = Default::default();
+            config.with_should_stop(should_stop.clone());
+
+            // Convert Config to a raw pointer and return it as jlong
+            let config = Box::into_raw(Box::new(config)) as jlong;
+            let stop = Box::into_raw(Box::new(should_stop)) as jlong;
+
+            env.new_object(
+                "com/github/optman/minivtun/Client",
+                "(JIJ)V",
+                &[config.into(), socket.into(), stop.into()],
+            )
+            .unwrap_or_else(|_| JObject::null())
+        }
+
+        /// # Safety
+        #[no_mangle]
+        unsafe extern "C" fn Java_com_github_optman_minivtun_Native_run(
+            _env: JNIEnv,
+            _: JClass,
+            config_ptr: jlong,
+            tun: jint,
+        ) {
+            let run = || -> Result<(), Box<dyn std::error::Error>> {
+                // Convert jlong back to Config
+                let config = Box::from_raw(config_ptr as *mut Config);
+                run(*config, tun as RawFd)
             };
 
             if let Err(err) = run() {
                 *LAST_ERROR.write().unwrap() = format!("{:?}", err);
-            };
+            }
+        }
+        #[no_mangle]
+        unsafe extern "C" fn Java_com_github_optman_minivtun_Native_stop(
+            _env: JNIEnv,
+            _: JClass,
+            should_stop_ptr: jlong,
+        ) {
+            // Convert jlong back to Config
+            let should_stop = Box::from_raw(should_stop_ptr as *mut Arc<AtomicBool>);
+            should_stop.store(true, Ordering::Relaxed);
+        }
+
+        /// # Safety
+        #[no_mangle]
+        unsafe extern "C" fn Java_com_github_optman_minivtun_Native_freeConfig(
+            _env: JNIEnv,
+            _: JClass,
+            config_ptr: jlong,
+        ) {
+            if config_ptr != 0 {
+                let _ = Box::from_raw(config_ptr as *mut Config);
+            }
         }
 
         /// # Safety
@@ -61,13 +127,13 @@ mod android {
         use std::os::unix::net::{SocketAddr, UnixListener, UnixStream};
         use std::os::unix::prelude::RawFd;
         use std::sync::RwLock;
+        use tun::platform::posix::Fd;
 
         pub(crate) const CONTROL_PATH: &str = "minivtun.sock";
         pub(crate) static LAST_ERROR: Lazy<RwLock<String>> = Lazy::new(Default::default);
 
         #[derive(Default, Deserialize)]
         pub(crate) struct Params {
-            pub(crate) tun: RawFd,
             pub(crate) svr_addr: String,
             pub(crate) rndz_svr_addr: String,
             pub(crate) rndz_remote_id: String,
@@ -78,9 +144,10 @@ mod android {
             pub(crate) cipher: String,
         }
 
-        pub(crate) fn run(params: Params) -> Result<(), Box<dyn std::error::Error>> {
+        pub(crate) fn prepare<'a>(
+            params: Params,
+        ) -> Result<(Config<'a>, RawFd), Box<dyn std::error::Error>> {
             let Params {
-                tun,
                 svr_addr,
                 rndz_svr_addr,
                 rndz_remote_id,
@@ -99,7 +166,6 @@ mod android {
             );
 
             let mut config = Config::new();
-            config.with_tun_fd(tun);
 
             if !svr_addr.is_empty() {
                 config.with_server_addr(svr_addr);
@@ -112,8 +178,6 @@ mod android {
             if !local_ip_v6.is_empty() {
                 config.with_ip_addr(local_ip_v6.parse()?);
             }
-
-            config.rebind = true;
 
             if !rndz_svr_addr.is_empty() {
                 config.rndz = Some(RndzConfig {
@@ -134,14 +198,25 @@ mod android {
                 config.with_cryptor(cryptor::Builder::new(secret, cipher)?.build());
             }
 
-            let raw_socket_factory = config_socket_factory(&mut config);
-            config.with_socket_factory(&raw_socket_factory);
+            let raw_socket_factory = config_socket_factory(&config);
+            let socket = raw_socket_factory(&config, false)?;
+            let socket_fd = socket.as_raw_fd();
+            config.with_socket(socket);
+            config.rebind = false;
 
             let ctrl_fd =
                 UnixListener::bind_addr(&SocketAddr::from_abstract_name(CONTROL_PATH).unwrap())?;
 
-            config.with_control_fd(ctrl_fd.as_raw_fd());
+            config.with_control_fd(ctrl_fd);
 
+            Ok((config, socket_fd))
+        }
+
+        pub(crate) fn run(
+            mut config: Config,
+            tun: RawFd,
+        ) -> Result<(), Box<dyn std::error::Error>> {
+            config.with_tun_fd(Fd(tun));
             Client::new(config)?.run()
         }
 
@@ -157,7 +232,7 @@ mod android {
 
 #[cfg(test)]
 mod test {
-    use super::android::native::{run, Params};
+    use super::android::native::{prepare, run, Params};
     use std::{
         fs::File,
         os::unix::prelude::{AsFd, AsRawFd},
@@ -169,13 +244,11 @@ mod test {
         let null_dev = File::open("/dev/null").unwrap();
         let null_fd = null_dev.as_fd().as_raw_fd();
         let params = Params {
-            tun: null_fd,
             ..Default::default()
         };
         let join_handle = thread::spawn(move || {
-            if let Err(_e) = run(params) {
-                //println!("{:?}", e);
-            }
+            let (config, _fd) = prepare(params).unwrap();
+            run(config, null_fd).unwrap();
         });
 
         std::thread::sleep(std::time::Duration::from_secs(1));

@@ -20,14 +20,14 @@
     <LinearLayout android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="3mm">
+            android:padding="8dp">
 
 
 
         <Button
             android:id="@+id/delete"
             style="@style/item"
-            android:text="DELETE!"
+            android:text="@string/delete"
             android:textColor="#E90E63"
             android:textStyle="bold" />
 
@@ -37,43 +37,69 @@
             android:layout_height="1dp"
             android:background="?android:attr/listDivider" />
 
-        <TextView style="@style/item" android:text="Server Name:"/>
-        <EditText style="@style/item" android:id="@+id/server_name"/>
+        <TextView style="@style/item" android:text="@string/server_name" android:labelFor="@+id/server_name"/>
+        <EditText style="@style/item" android:id="@+id/server_name" android:inputType="text"
+            android:importantForAutofill="no"/>
 
-        <TextView style="@style/item" android:text="@string/server_address"/>
-        <EditText style="@style/item" android:id="@+id/server_address"/>
+        <TextView style="@style/item" android:text="@string/server_address" android:labelFor="@+id/server_address"/>
+        <EditText style="@style/item" android:id="@+id/server_address" android:inputType="textUri"
+            android:importantForAutofill="no"/>
 
-        <TextView style="@style/item" android:text="Rndz Server Address:"/>
-        <EditText style="@style/item" android:id="@+id/rndz_server_address"/>
+        <TextView style="@style/item" android:text="@string/rndz_server_address" android:labelFor="@+id/rndz_server_address"/>
+        <EditText style="@style/item" android:id="@+id/rndz_server_address" android:inputType="textUri"
+            android:importantForAutofill="no"/>
 
-        <TextView style="@style/item" android:text="Rndz Remote Id:"/>
-        <EditText style="@style/item" android:id="@+id/rndz_remote_id"/>
+        <TextView style="@style/item" android:text="@string/rndz_remote_id" android:labelFor="@+id/rndz_remote_id"/>
+        <EditText style="@style/item" android:id="@+id/rndz_remote_id" android:inputType="text"
+            android:importantForAutofill="no"/>
 
-        <TextView style="@style/item" android:text="Rndz Local Id:"/>
-        <EditText style="@style/item" android:id="@+id/rndz_local_id"/>
+        <TextView style="@style/item" android:text="@string/rndz_local_id" android:labelFor="@+id/rndz_local_id"/>
+        <EditText style="@style/item" android:id="@+id/rndz_local_id" android:inputType="text"
+            android:importantForAutofill="no"/>
 
-        <TextView style="@style/item" android:text="Cipher:"/>
-        <EditText style="@style/item" android:id="@+id/cipher"/>
+        <TextView style="@style/item" android:text="@string/cipher" android:labelFor="@+id/cipher"/>
+        <EditText style="@style/item" android:id="@+id/cipher" android:inputType="text"
+            android:importantForAutofill="no"/>
 
-        <TextView style="@style/item" android:text="@string/secret"/>
-        <EditText style="@style/item" android:id="@+id/secret" android:inputType="textPassword"/>
+        <TextView style="@style/item" android:text="@string/secret" android:labelFor="@+id/secret"/>
+        <EditText style="@style/item" android:id="@+id/secret" android:inputType="textPassword"
+            android:importantForAutofill="no"/>
 
-        <TextView style="@style/item" android:text="Local IPv4:"/>
-        <EditText style="@style/item" android:id="@+id/local_ipv4"/>
+        <TextView style="@style/item" android:text="@string/local_ipv4" android:labelFor="@+id/local_ipv4"/>
+        <EditText style="@style/item" android:id="@+id/local_ipv4" android:inputType="text"
+            android:importantForAutofill="no"/>
 
-        <TextView style="@style/item" android:text="Local IPv6:"/>
-        <EditText style="@style/item" android:id="@+id/local_ipv6"/>
+        <TextView style="@style/item" android:text="@string/local_ipv6" android:labelFor="@+id/local_ipv6"/>
+        <EditText style="@style/item" android:id="@+id/local_ipv6" android:inputType="text"
+            android:importantForAutofill="no"/>
 
-        <TextView style="@style/item" android:text="Routes:"/>
-        <EditText style="@style/item" android:id="@+id/routes"/>
+        <TextView style="@style/item" android:text="@string/routes" android:labelFor="@+id/routes"/>
+        <EditText style="@style/item" android:id="@+id/routes" android:inputType="text"
+            android:importantForAutofill="no"/>
 
-        <TextView style="@style/item" android:text="NameServers:"/>
-        <EditText style="@style/item" android:id="@+id/dns"/>
+        <TextView style="@style/item" android:text="@string/nameservers" android:labelFor="@+id/dns"/>
+        <EditText style="@style/item" android:id="@+id/dns" android:inputType="text"
+            android:importantForAutofill="no"/>
+
+        <TextView style="@style/item" android:text="@string/vpn_mode"/>
+        <Spinner
+            android:id="@+id/vpn_mode"
+            style="@style/item"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <Button
+            android:id="@+id/select_apps"
+            style="@style/item"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/select_apps"
+            android:visibility="gone" />
 
         <Button
             android:id="@+id/save"
             style="@style/item"
-            android:text="Save"
+            android:text="@string/save"
             android:textStyle="bold" />
 
     </LinearLayout>

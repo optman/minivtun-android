@@ -8,7 +8,7 @@ buildscript {
 
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.3.1'
+        classpath 'com.android.tools.build:gradle:8.6.0'
 		classpath 'org.mozilla.rust-android-gradle:plugin:0.9.3'
     }
 }
@@ -17,11 +17,5 @@ allprojects {
     repositories {
         google()
         mavenCentral()
-    }
-
-    gradle.projectsEvaluated {
-        tasks.withType(JavaCompile) {
-            options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
-        }
     }
 }

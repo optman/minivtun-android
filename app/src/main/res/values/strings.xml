@@ -1,38 +1,27 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-  Copyright (C) 2011 The Android Open Source Project
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
- -->
-
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app">ToyVPN</string>
-
+    <string name="app">Minivtun</string>
     <string name="server_address">Server Address:</string>
-    <string name="rndz_server_address">Rndz Server Address:</string>
-    <string name="rndz_remote_id">Rndz Remote Id</string>
-    <string name="rndz_local_id">Rndz Local Id</string>
-    <string name="cipher">Cihper:</string>
     <string name="secret">Shared Secret:</string>
+    <string name="connecting">Minivtun is connecting…</string>
+    <string name="connected">Minivtun is connected!</string>
+    <string name="disconnected">Minivtun is disconnected!</string>
+    <string name="export_list">Export</string>
+    <string name="import_list">Import</string>
+    <string name="delete">DELETE!</string>
+    <string name="server_name">Server Name:</string>
+    <string name="rndz_server_address">Rndz Server Address:</string>
+    <string name="rndz_remote_id">Rndz Remote Id:</string>
+    <string name="rndz_local_id">Rndz Local Id:</string>
+    <string name="cipher">Cipher:</string>
     <string name="local_ipv4">Local IPv4:</string>
     <string name="local_ipv6">Local IPv6:</string>
     <string name="routes">Routes:</string>
-    <string name="dns">NameSevers:</string>
-
-    <string name="connect">Connect!</string>
-    <string name="disconnect">Disconnect!</string>
-
-    <string name="connecting">ToyVPN is connecting...</string>
-    <string name="connected">ToyVPN is connected!</string>
-    <string name="disconnected">ToyVPN is disconnected!</string>
-
+    <string name="nameservers">Name Servers:</string>
+    <string name="vpn_mode">VPN Mode:</string>
+    <string name="select_apps">Select Apps</string>
+    <string name="save">Save</string>
+    <string name="status">Status</string>
+    <string name="default_server_name">server name</string>
+    <string name="add_server_button_description">Add new server</string>
 </resources>
