@@ -3,15 +3,15 @@ mod android {
 
     mod jni {
         use jni::sys::jlong;
-        use std::os::fd::RawFd;
+        use libc::{socketpair, AF_UNIX, SOCK_DGRAM};
+        use std::os::fd::{FromRawFd, OwnedFd, RawFd};
+        use std::os::unix::net::UnixDatagram;
 
         use super::native::*;
         use jni::objects::{JClass, JObject, JString};
         use jni::sys::jint;
         use jni::JNIEnv;
         use minivtun::Config;
-        use std::sync::atomic::{AtomicBool, Ordering};
-        use std::sync::Arc;
 
         #[no_mangle]
         unsafe extern "C" fn Java_com_github_optman_minivtun_Native_prepare<'a>(
@@ -39,17 +39,23 @@ mod android {
                 return JObject::null();
             };
 
-            let should_stop: Arc<AtomicBool> = Default::default();
-            config.with_should_stop(should_stop.clone());
+            //make socket pair
+            let mut fds = [0; 2];
+            if socketpair(AF_UNIX, SOCK_DGRAM, 0, fds.as_mut_ptr()) != 0 {
+                *LAST_ERROR.write().unwrap() = "Failed to create socket pair".to_string();
+                return JObject::null();
+            }
+            let (socket_read, socket_write) = (fds[0], fds[1]);
+            config.with_exit_signal(OwnedFd::from_raw_fd(socket_read));
 
             // Convert Config to a raw pointer and return it as jlong
             let config = Box::into_raw(Box::new(config)) as jlong;
-            let stop = Box::into_raw(Box::new(should_stop)) as jlong;
+            let exit_signal = Box::into_raw(Box::new(socket_write)) as jlong;
 
             env.new_object(
                 "com/github/optman/minivtun/Client",
                 "(JIJ)V",
-                &[config.into(), socket.into(), stop.into()],
+                &[config.into(), socket.into(), exit_signal.into()],
             )
             .unwrap_or_else(|_| JObject::null())
         }
@@ -76,11 +82,11 @@ mod android {
         unsafe extern "C" fn Java_com_github_optman_minivtun_Native_stop(
             _env: JNIEnv,
             _: JClass,
-            should_stop_ptr: jlong,
+            exit_signal: jlong,
         ) {
-            // Convert jlong back to Config
-            let should_stop = Box::from_raw(should_stop_ptr as *mut Arc<AtomicBool>);
-            should_stop.store(true, Ordering::Relaxed);
+            let exit_signal = Box::from_raw(exit_signal as *mut RawFd);
+            let socket = UnixDatagram::from_raw_fd(*exit_signal);
+            socket.send(&[1]).unwrap();
         }
 
         /// # Safety

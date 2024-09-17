@@ -420,6 +420,7 @@ version = "0.1.0"
 dependencies = [
  "android_logger",
  "jni",
+ "libc",
  "log",
  "minivtun-rs",
  "once_cell",
@@ -431,7 +432,7 @@ dependencies = [
 [[package]]
 name = "minivtun-rs"
 version = "0.1.8"
-source = "git+https://github.com/optman/minivtun-rs?rev=v0.1.8#5f88c15547f55b72d73b5b0aaf91cc24b281aa84"
+source = "git+https://github.com/optman/minivtun-rs?rev=b6996a3e6a#b6996a3e6a76460cc7ed525fc2bd963d4ad73bd4"
 dependencies = [
  "aes",
  "block-modes",
