@@ -15,18 +15,18 @@ mod android {
 
         #[no_mangle]
         unsafe extern "C" fn Java_com_github_optman_minivtun_Native_prepare<'a>(
-            env: JNIEnv<'a>,
+            mut env: JNIEnv<'a>,
             _: JClass,
             params: JString,
         ) -> JObject<'a> {
             android_logger::init_once(
-                android_logger::Config::default().with_min_level(log::Level::Info),
+                android_logger::Config::default().with_max_level(log::LevelFilter::Info),
             );
 
             LAST_ERROR.write().unwrap().clear();
 
-            let prepare = || -> Result<_, Box<dyn std::error::Error>> {
-                let params: Params = serde_json::from_str(env.get_string(params)?.to_str()?)?;
+            let mut prepare = || -> Result<_, Box<dyn std::error::Error>> {
+                let params: Params = serde_json::from_str(env.get_string(&params)?.to_str()?)?;
                 prepare(params)
             };
 
@@ -71,7 +71,7 @@ mod android {
             let run = || -> Result<(), Box<dyn std::error::Error>> {
                 // Convert jlong back to Config
                 let config = Box::from_raw(config_ptr as *mut Config);
-                run(*config, tun as RawFd)
+                run(*config, unsafe { OwnedFd::from_raw_fd(tun as RawFd) })
             };
 
             if let Err(err) = run() {
@@ -124,6 +124,7 @@ mod android {
         #[cfg(target_os = "android")]
         use std::os::android::net::SocketAddrExt;
 
+        use std::os::fd::OwnedFd;
         #[cfg(target_os = "linux")]
         use std::os::linux::net::SocketAddrExt;
 
@@ -133,7 +134,6 @@ mod android {
         use std::os::unix::net::{SocketAddr, UnixListener, UnixStream};
         use std::os::unix::prelude::RawFd;
         use std::sync::RwLock;
-        use tun::platform::posix::Fd;
 
         pub(crate) const CONTROL_PATH: &str = "minivtun.sock";
         pub(crate) static LAST_ERROR: Lazy<RwLock<String>> = Lazy::new(Default::default);
@@ -220,9 +220,9 @@ mod android {
 
         pub(crate) fn run(
             mut config: Config,
-            tun: RawFd,
+            tun_fd: OwnedFd,
         ) -> Result<(), Box<dyn std::error::Error>> {
-            config.with_tun_fd(Fd(tun));
+            config.with_tun_fd(tun_fd);
             Client::new(config)?.run()
         }
 

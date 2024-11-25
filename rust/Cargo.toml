@@ -10,12 +10,15 @@ name = "minivtun"
 crate-type = ["dylib"]
 
 [dependencies]
-minivtun-rs = {default-features=false, features=["holepunch"], rev="b6996a3e6a", git="https://github.com/optman/minivtun-rs"}
-jni = "0.20"
-android_logger = "0.11"
-log = "0.4"
-once_cell = "1.17.1"
-serde = {version="1.0", features=["derive"]}
-serde_json = "1.0"
-tun = "0.5.5"
-libc = "0.2"
+#minivtun-rs = {default-features=false, features=["holepunch"], rev="b6996a3e6a", git="https://github.com/optman/minivtun-rs"}
+minivtun-rs = { default-features = false, features = [
+    "holepunch",
+], path = "/home/optman/code/minivtun-rs" }
+jni = "0.21.1"
+android_logger = "0.14.1"
+log = "0.4.22"
+once_cell = "1.20.2"
+serde = { version = "1.0.215", features = ["derive"] }
+serde_json = "1.0.133"
+tun = "0.7.3"
+libc = "0.2.164"
