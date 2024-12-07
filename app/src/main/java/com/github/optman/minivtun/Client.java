@@ -1,34 +1,32 @@
 package com.github.optman.minivtun;
 
 public class Client {
-    public long config;
-    public int socket;
+    public long context;
     public long stop;
 
     // Add this constructor
-    public Client(long config, int socket, long stop) {
-        this.config = config;
-        this.socket = socket;
+    public Client(long context, long stop) {
+        this.context = context;
         this.stop = stop;
     }
 
     public void free() {
-        if (config != 0) {
-            Native.freeConfig(config);
-            config = 0;
-        }
         if (stop != 0) {
             Native.stop(stop);
             stop = 0;
         }
+        if (context != 0) {
+            Native.free(context);
+            context = 0;
+        }
     }
 
-    public void run(int tun) {
-        if (config == 0) {
-            throw new RuntimeException("config is not prepared");
+    public void run(Object vpnService, int tun) {
+        if (context == 0) {
+            throw new RuntimeException("context is not prepared");
         }
-        Native.run(config, tun);
-        config = 0;
+        Native.run(vpnService, context, tun);
+        context = 0;
 
     }
 

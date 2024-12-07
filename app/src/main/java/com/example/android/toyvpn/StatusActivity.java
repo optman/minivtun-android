@@ -30,8 +30,8 @@ public class StatusActivity extends AppCompatActivity {
     relParent.addView(txtView);
     setContentView(relParent, relParentParam);
 
-    // stop after 30 seconds to save battery.
-    timer = new CountDownTimer(30_000, 1_000) {
+    // stop after 10 minutes to save battery.
+    timer = new CountDownTimer(600_000, 1_000) {
       public void onTick(long millisUntilFinished) {
         String status = Native.Info();
         txtView.setText(status);

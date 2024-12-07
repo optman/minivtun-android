@@ -10,10 +10,9 @@ name = "minivtun"
 crate-type = ["dylib"]
 
 [dependencies]
-#minivtun-rs = {default-features=false, features=["holepunch"], rev="b6996a3e6a", git="https://github.com/optman/minivtun-rs"}
 minivtun-rs = { default-features = false, features = [
     "holepunch",
-], path = "/home/optman/code/minivtun-rs" }
+], version = "0.1.9", git = "https://github.com/optman/minivtun-rs" }
 jni = "0.21.1"
 android_logger = "0.14.1"
 log = "0.4.22"

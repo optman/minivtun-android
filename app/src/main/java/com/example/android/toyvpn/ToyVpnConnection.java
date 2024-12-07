@@ -89,8 +89,7 @@ public class ToyVpnConnection implements Runnable {
         }
         try {
             iface = configure();
-            mService.protect(client.socket);
-            client.run(iface.detachFd());
+            client.run(mService, iface.detachFd());
         } catch (Exception e) {
             Log.e(getTag(), "vpn exit", e);
         } finally {

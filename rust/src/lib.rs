@@ -2,16 +2,64 @@
 mod android {
 
     mod jni {
-        use jni::sys::jlong;
-        use libc::{socketpair, AF_UNIX, SOCK_DGRAM};
-        use std::os::fd::{FromRawFd, OwnedFd, RawFd};
-        use std::os::unix::net::UnixDatagram;
-
         use super::native::*;
         use jni::objects::{JClass, JObject, JString};
         use jni::sys::jint;
+        use jni::sys::jlong;
         use jni::JNIEnv;
-        use minivtun::Config;
+        use libc::{socketpair, AF_UNIX, SOCK_DGRAM};
+        use minivtun::{Config, RuntimeBuilder, SocketConfigure};
+        use once_cell::sync::Lazy;
+        use std::os::fd::{FromRawFd, OwnedFd, RawFd};
+
+        #[cfg(target_os = "android")]
+        use std::os::android::net::SocketAddrExt;
+
+        #[cfg(target_os = "linux")]
+        use std::os::linux::net::SocketAddrExt;
+
+        use std::os::unix::net::SocketAddr;
+        use std::os::unix::net::{UnixDatagram, UnixListener};
+        use std::rc::Rc;
+        use std::sync::RwLock;
+        use std::time::Duration;
+
+        pub(crate) const CONTROL_PATH: &str = "minivtun.sock";
+        pub(crate) static LAST_ERROR: Lazy<RwLock<String>> = Lazy::new(Default::default);
+
+        fn clear_error() {
+            LAST_ERROR.write().unwrap().clear();
+        }
+        fn set_error(err: String) {
+            *LAST_ERROR.write().unwrap() = err;
+        }
+
+        fn get_error() -> String {
+            LAST_ERROR.read().unwrap().clone()
+        }
+
+        struct ProtectSocket {
+            env_raw: *mut jni::sys::JNIEnv,
+            vpn_service_raw: jni::sys::jobject,
+        }
+
+        impl SocketConfigure for ProtectSocket {
+            fn config_socket(&self, sk: RawFd) -> Result<(), std::io::Error> {
+                let mut env = unsafe { JNIEnv::from_raw(self.env_raw).unwrap() };
+                let vpn_service = unsafe { JObject::from_raw(self.vpn_service_raw) };
+
+                if !env
+                    .call_method(vpn_service, "protect", "(I)Z", &[sk.into()])
+                    .unwrap()
+                    .z()
+                    .unwrap()
+                {
+                    return Err(std::io::Error::other("protect socket failed".to_owned()));
+                }
+
+                Ok(())
+            }
+        }
 
         #[no_mangle]
         unsafe extern "C" fn Java_com_github_optman_minivtun_Native_prepare<'a>(
@@ -23,7 +71,7 @@ mod android {
                 android_logger::Config::default().with_max_level(log::LevelFilter::Info),
             );
 
-            LAST_ERROR.write().unwrap().clear();
+            clear_error();
 
             let mut prepare = || -> Result<_, Box<dyn std::error::Error>> {
                 let params: Params = serde_json::from_str(env.get_string(&params)?.to_str()?)?;
@@ -31,31 +79,45 @@ mod android {
             };
 
             // prepare config
-            let (mut config, socket) = if let Ok((config, socket)) = prepare().map_err(|err| {
-                *LAST_ERROR.write().unwrap() = format!("{:?}", err);
-            }) {
-                (config, socket)
-            } else {
+            let Ok(mut config) = prepare().inspect_err(|err| {
+                set_error(format!("{:?}", err));
+            }) else {
                 return JObject::null();
             };
+
+            config.rebind_timeout = Duration::from_secs(120);
+            config.rebind = true;
+
+            let config: Rc<Config> = config.into();
+            let mut builder = RuntimeBuilder::new(config.clone());
+
+            let bind_ctrl_fd =
+                || UnixListener::bind_addr(&SocketAddr::from_abstract_name(CONTROL_PATH)?);
+            let Ok(ctrl_fd) = bind_ctrl_fd().inspect_err(|e| {
+                set_error(format!("Failed to bind control socket: {:?}", e));
+            }) else {
+                return JObject::null();
+            };
+
+            builder.with_control_fd(ctrl_fd);
 
             //make socket pair
             let mut fds = [0; 2];
             if socketpair(AF_UNIX, SOCK_DGRAM, 0, fds.as_mut_ptr()) != 0 {
-                *LAST_ERROR.write().unwrap() = "Failed to create socket pair".to_string();
+                set_error("Failed to create socket pair".to_string());
                 return JObject::null();
             }
             let (socket_read, socket_write) = (fds[0], fds[1]);
-            config.with_exit_signal(OwnedFd::from_raw_fd(socket_read));
+            builder.with_exit_signal(OwnedFd::from_raw_fd(socket_read));
 
             // Convert Config to a raw pointer and return it as jlong
-            let config = Box::into_raw(Box::new(config)) as jlong;
+            let context = Box::into_raw(Box::new((config, builder))) as jlong;
             let exit_signal = Box::into_raw(Box::new(socket_write)) as jlong;
 
             env.new_object(
                 "com/github/optman/minivtun/Client",
-                "(JIJ)V",
-                &[config.into(), socket.into(), exit_signal.into()],
+                "(JJ)V",
+                &[context.into(), exit_signal.into()],
             )
             .unwrap_or_else(|_| JObject::null())
         }
@@ -63,19 +125,32 @@ mod android {
         /// # Safety
         #[no_mangle]
         unsafe extern "C" fn Java_com_github_optman_minivtun_Native_run(
-            _env: JNIEnv,
+            env: JNIEnv,
             _: JClass,
-            config_ptr: jlong,
+            vpn_service: JObject,
+            context: jlong,
             tun: jint,
         ) {
+            let context = Box::from_raw(context as *mut (Rc<Config>, RuntimeBuilder));
+            let (config, mut builder) = *context;
+
+            let tun_fd = unsafe { OwnedFd::from_raw_fd(tun as RawFd) };
+            builder.with_tun_fd(tun_fd);
+
+            let protect_socket = ProtectSocket {
+                env_raw: env.get_raw(),
+                vpn_service_raw: vpn_service.as_raw(),
+            };
+
+            builder.with_socket_configure(Box::new(protect_socket));
+
             let run = || -> Result<(), Box<dyn std::error::Error>> {
-                // Convert jlong back to Config
-                let config = Box::from_raw(config_ptr as *mut Config);
-                run(*config, unsafe { OwnedFd::from_raw_fd(tun as RawFd) })
+                let rt = builder.build()?;
+                run(config, rt)
             };
 
             if let Err(err) = run() {
-                *LAST_ERROR.write().unwrap() = format!("{:?}", err);
+                set_error(format!("{:?}", err));
             }
         }
         #[no_mangle]
@@ -86,18 +161,19 @@ mod android {
         ) {
             let exit_signal = Box::from_raw(exit_signal as *mut RawFd);
             let socket = UnixDatagram::from_raw_fd(*exit_signal);
-            socket.send(&[1]).unwrap();
+            //ignore errors
+            let _ = socket.send(&[1]);
         }
 
         /// # Safety
         #[no_mangle]
-        unsafe extern "C" fn Java_com_github_optman_minivtun_Native_freeConfig(
+        unsafe extern "C" fn Java_com_github_optman_minivtun_Native_free(
             _env: JNIEnv,
             _: JClass,
-            config_ptr: jlong,
+            context: jlong,
         ) {
-            if config_ptr != 0 {
-                let _ = Box::from_raw(config_ptr as *mut Config);
+            if context != 0 {
+                let _ = Box::from_raw(context as *mut (Rc<Config>, RuntimeBuilder));
             }
         }
 
@@ -109,7 +185,7 @@ mod android {
         ) -> JString<'a> {
             let result = match info() {
                 Ok(res) => res,
-                Err(_) => LAST_ERROR.read().unwrap().clone(),
+                Err(_) => get_error(),
             };
 
             env.new_string(result).unwrap()
@@ -117,26 +193,18 @@ mod android {
     }
 
     pub(crate) mod native {
-        use minivtun::{config_socket_factory, cryptor, Client, Config, RndzConfig};
+        use minivtun::{config::rndz, cryptor, Client, Config, Runtime};
 
-        use std::io::Read;
+        use std::{io::Read, rc::Rc};
 
         #[cfg(target_os = "android")]
         use std::os::android::net::SocketAddrExt;
 
-        use std::os::fd::OwnedFd;
         #[cfg(target_os = "linux")]
         use std::os::linux::net::SocketAddrExt;
 
-        use once_cell::sync::Lazy;
         use serde::Deserialize;
-        use std::os::unix::io::AsRawFd;
-        use std::os::unix::net::{SocketAddr, UnixListener, UnixStream};
-        use std::os::unix::prelude::RawFd;
-        use std::sync::RwLock;
-
-        pub(crate) const CONTROL_PATH: &str = "minivtun.sock";
-        pub(crate) static LAST_ERROR: Lazy<RwLock<String>> = Lazy::new(Default::default);
+        use std::os::unix::net::{SocketAddr, UnixStream};
 
         #[derive(Default, Deserialize)]
         pub(crate) struct Params {
@@ -150,9 +218,7 @@ mod android {
             pub(crate) cipher: String,
         }
 
-        pub(crate) fn prepare<'a>(
-            params: Params,
-        ) -> Result<(Config<'a>, RawFd), Box<dyn std::error::Error>> {
+        pub(crate) fn prepare(params: Params) -> Result<Config, Box<dyn std::error::Error>> {
             let Params {
                 svr_addr,
                 rndz_svr_addr,
@@ -186,11 +252,10 @@ mod android {
             }
 
             if !rndz_svr_addr.is_empty() {
-                config.rndz = Some(RndzConfig {
-                    server: Some(rndz_svr_addr),
+                config.rndz = Some(rndz::Config {
+                    server: rndz_svr_addr,
+                    local_id: rndz_local_id,
                     remote_id: Some(rndz_remote_id),
-                    local_id: Some(rndz_local_id),
-                    svr_sk_builder: None,
                 })
             };
 
@@ -204,31 +269,20 @@ mod android {
                 config.with_cryptor(cryptor::Builder::new(secret, cipher)?.build());
             }
 
-            let raw_socket_factory = config_socket_factory(&config);
-            let socket = raw_socket_factory(&config, false)?;
-            let socket_fd = socket.as_raw_fd();
-            config.with_socket(socket);
-            config.rebind = false;
-
-            let ctrl_fd =
-                UnixListener::bind_addr(&SocketAddr::from_abstract_name(CONTROL_PATH).unwrap())?;
-
-            config.with_control_fd(ctrl_fd);
-
-            Ok((config, socket_fd))
+            Ok(config)
         }
 
         pub(crate) fn run(
-            mut config: Config,
-            tun_fd: OwnedFd,
+            config: Rc<Config>,
+            rt: Runtime,
         ) -> Result<(), Box<dyn std::error::Error>> {
-            config.with_tun_fd(tun_fd);
-            Client::new(config)?.run()
+            Client::new(config, rt)?.run()
         }
 
         pub(crate) fn info() -> Result<String, std::io::Error> {
-            let mut ctrl =
-                UnixStream::connect_addr(&SocketAddr::from_abstract_name(CONTROL_PATH).unwrap())?;
+            let mut ctrl = UnixStream::connect_addr(
+                &SocketAddr::from_abstract_name(super::jni::CONTROL_PATH).unwrap(),
+            )?;
             let mut buf = String::new();
             ctrl.read_to_string(&mut buf)?;
             Ok(buf)
@@ -239,27 +293,27 @@ mod android {
 #[cfg(test)]
 mod test {
     use super::android::native::{prepare, run, Params};
-    use std::{
-        fs::File,
-        os::unix::prelude::{AsFd, AsRawFd},
-        thread,
-    };
+    use minivtun::{Config, RuntimeBuilder};
+    use std::rc::Rc;
+    use std::{fs::File, thread};
 
     #[test]
     fn run_stop() {
         let null_dev = File::open("/dev/null").unwrap();
-        let null_fd = null_dev.as_fd().as_raw_fd();
         let params = Params {
             ..Default::default()
         };
         let join_handle = thread::spawn(move || {
-            let (config, _fd) = prepare(params).unwrap();
-            run(config, null_fd).unwrap();
+            let config = prepare(params).unwrap();
+            let config: Rc<Config> = config.into();
+            let mut builder = RuntimeBuilder::new(config.clone());
+            builder.with_tun_fd(null_dev.into());
+            let rt = builder.build().unwrap();
+            run(config, rt).unwrap();
         });
 
         std::thread::sleep(std::time::Duration::from_secs(1));
 
-        drop(null_dev);
         join_handle.join().unwrap();
     }
 }

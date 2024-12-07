@@ -37,11 +37,11 @@ public class Native {
 
     private static native Client prepare(String params);
 
-    public static native void run(long config, int tun);
+    public static native void run(Object vpnService, long context, int tun);
 
     private static native String info();
 
-    public static native void freeConfig(long nativeConfig);
+    public static native void free(long context);
 
     public static native void stop(long stop);
 }
