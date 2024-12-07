@@ -81,12 +81,17 @@
         <EditText style="@style/item" android:id="@+id/dns" android:inputType="text"
             android:importantForAutofill="no"/>
 
+        <TextView style="@style/item" android:text="@string/mtu" android:labelFor="@+id/mtu"/>
+        <EditText style="@style/item" android:id="@+id/mtu" android:inputType="number"
+            android:importantForAutofill="no"/>
+
         <TextView style="@style/item" android:text="@string/vpn_mode"/>
         <Spinner
             android:id="@+id/vpn_mode"
             style="@style/item"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
+
 
         <Button
             android:id="@+id/select_apps"

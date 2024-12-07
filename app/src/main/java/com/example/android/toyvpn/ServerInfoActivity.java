@@ -81,6 +81,7 @@ public class ServerInfoActivity extends AppCompatActivity {
         final TextView localIpv6 = findViewById(R.id.local_ipv6);
         final TextView routes = findViewById(R.id.routes);
         final TextView dns = findViewById(R.id.dns);
+        final TextView mtu = findViewById(R.id.mtu);
 
         vpnModeSpinner = findViewById(R.id.vpn_mode);
         selectAppsButton = findViewById(R.id.select_apps);
@@ -94,17 +95,18 @@ public class ServerInfoActivity extends AppCompatActivity {
         try {
             if (position >= 0) {
                 data = new JSONObject(getIntent().getStringExtra(PARAM_DATA));
-                serverName.setText(data.getString(ToyVpnConfig.json.SERVER_NAME));
-                serverAddress.setText(data.getString(ToyVpnConfig.json.SERVER_ADDRESS));
-                rndzServerAddress.setText(data.getString(ToyVpnConfig.json.RNDZ_SERVER_ADDRESS));
-                rndzRemoteId.setText(data.getString(ToyVpnConfig.json.RNDZ_REMOTE_ID));
-                rndzLocalId.setText(data.getString(ToyVpnConfig.json.RNDZ_LOCAL_ID));
-                cipher.setText(data.getString(ToyVpnConfig.json.CIPHER));
-                sharedSecret.setText(data.getString(ToyVpnConfig.json.SHARED_SECRET));
-                localIpv4.setText(data.getString(ToyVpnConfig.json.LOCAL_IPv4));
-                localIpv6.setText(data.getString(ToyVpnConfig.json.LOCAL_IPv6));
-                routes.setText(data.getString(ToyVpnConfig.json.ROUTES));
-                dns.setText(data.getString(ToyVpnConfig.json.DNS));
+                serverName.setText(data.optString(ToyVpnConfig.json.SERVER_NAME, ""));
+                serverAddress.setText(data.optString(ToyVpnConfig.json.SERVER_ADDRESS, ""));
+                rndzServerAddress.setText(data.optString(ToyVpnConfig.json.RNDZ_SERVER_ADDRESS, ""));
+                rndzRemoteId.setText(data.optString(ToyVpnConfig.json.RNDZ_REMOTE_ID, ""));
+                rndzLocalId.setText(data.optString(ToyVpnConfig.json.RNDZ_LOCAL_ID, ""));
+                cipher.setText(data.optString(ToyVpnConfig.json.CIPHER, ""));
+                sharedSecret.setText(data.optString(ToyVpnConfig.json.SHARED_SECRET, ""));
+                localIpv4.setText(data.optString(ToyVpnConfig.json.LOCAL_IPv4, ""));
+                localIpv6.setText(data.optString(ToyVpnConfig.json.LOCAL_IPv6, ""));
+                routes.setText(data.optString(ToyVpnConfig.json.ROUTES, ""));
+                dns.setText(data.optString(ToyVpnConfig.json.DNS, ""));
+                mtu.setText(data.optString(ToyVpnConfig.json.MTU, ""));
 
                 VpnMode vpnMode = VpnMode
                         .valueOf(data.optString(ToyVpnConfig.json.VPN_MODE, VpnMode.APPLY_TO_ALL.name()));
@@ -136,6 +138,7 @@ public class ServerInfoActivity extends AppCompatActivity {
                 data.put(ToyVpnConfig.json.LOCAL_IPv6, localIpv6.getText().toString());
                 data.put(ToyVpnConfig.json.ROUTES, routes.getText().toString());
                 data.put(ToyVpnConfig.json.DNS, dns.getText().toString());
+                data.put(ToyVpnConfig.json.MTU, mtu.getText().toString());
                 VpnMode currentMode = VpnMode.values()[vpnModeSpinner.getSelectedItemPosition()];
                 data.put(ToyVpnConfig.json.VPN_MODE, currentMode.name());
                 data.put(ToyVpnConfig.json.SELECTED_APPS, new JSONArray(selectedAppIds));

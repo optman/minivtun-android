@@ -18,6 +18,7 @@
     <string name="local_ipv6">Local IPv6:</string>
     <string name="routes">Routes:</string>
     <string name="nameservers">Name Servers:</string>
+    <string name="mtu">MTU:</string>
     <string name="vpn_mode">VPN Mode:</string>
     <string name="select_apps">Select Apps</string>
     <string name="save">Save</string>

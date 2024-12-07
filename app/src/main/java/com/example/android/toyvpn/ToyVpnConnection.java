@@ -127,8 +127,11 @@ public class ToyVpnConnection implements Runnable {
             if (!mConfig.dns.isEmpty())
                 builder.addDnsServer(mConfig.dns);
         }
-
-        builder.setMtu(1300);
+        int mtu = 1300;
+        if (!mConfig.mtu.isBlank()) {
+            mtu = Integer.parseInt(mConfig.mtu);
+        }
+        builder.setMtu(mtu);
 
         if (mConfig.vpnMode.equals(VpnMode.ALLOW_SELECTED)) {
             for (String app : mConfig.selectedApps) {
