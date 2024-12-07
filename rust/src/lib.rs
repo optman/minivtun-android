@@ -206,6 +206,8 @@ mod android {
         use serde::Deserialize;
         use std::os::unix::net::{SocketAddr, UnixStream};
 
+        use super::util::resolve_name;
+
         #[derive(Default, Deserialize)]
         pub(crate) struct Params {
             pub(crate) svr_addr: String,
@@ -240,7 +242,7 @@ mod android {
             let mut config = Config::new();
 
             if !svr_addr.is_empty() {
-                config.with_server_addr(svr_addr);
+                config.with_server_addr(resolve_name(&svr_addr)?);
             }
 
             if !local_ip_v4.is_empty() {
@@ -253,7 +255,7 @@ mod android {
 
             if !rndz_svr_addr.is_empty() {
                 config.rndz = Some(rndz::Config {
-                    server: rndz_svr_addr,
+                    server: resolve_name(&rndz_svr_addr)?,
                     local_id: rndz_local_id,
                     remote_id: Some(rndz_remote_id),
                 })
@@ -286,6 +288,37 @@ mod android {
             let mut buf = String::new();
             ctrl.read_to_string(&mut buf)?;
             Ok(buf)
+        }
+    }
+
+    mod util {
+        use std::io::Error;
+        use std::net::ToSocketAddrs;
+
+        pub(crate) fn resolve_name(svr_addr: &str) -> Result<String, Error> {
+            let parts: Vec<&str> = svr_addr.rsplitn(2, ':').collect();
+            if parts.len() != 2 {
+                return Err(Error::other(
+                    "Invalid address format. Use 'domain/ip:port'.",
+                ));
+            }
+
+            let port = parts[0]; // can be a range such as 1000-2000
+            let domain_or_ip = parts[1];
+            let dummy_svr_addr = format!("{}:80", domain_or_ip);
+
+            match dummy_svr_addr.to_socket_addrs() {
+                Ok(mut addrs) => {
+                    if let Some(socket_addr) = addrs.next() {
+                        return Ok(format!("{}:{}", socket_addr.ip(), port));
+                    }
+                    Err(Error::other(format!(
+                        "No addresses found for {}",
+                        domain_or_ip
+                    )))
+                }
+                Err(e) => Err(e),
+            }
         }
     }
 }
